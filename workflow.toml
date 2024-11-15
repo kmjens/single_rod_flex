@@ -1,0 +1,19 @@
+[workspace]
+value_file = "signac_statepoint.json"
+
+[default.action.submit_options.greatlakes]
+account="sglotzer0"
+
+[default.action.submit_options.anvil]
+account='dmr140129'
+partition = "shared"
+                                                                                            
+[[action]]
+name = "Run"
+launchers =["mpi"]
+#products = ["Run.out"]
+resources.walltime.per_submission = "02:00:00"
+resources.processes.per_directory = 1
+group.maximum_size=1
+command = "python project.py --action $ACTION_NAME {directories}"
+

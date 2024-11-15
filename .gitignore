@@ -1,0 +1,7 @@
+workspace/
+workspace/*
+__pycache__
+.row
+.signac
+*.swp
+*/*.swp
