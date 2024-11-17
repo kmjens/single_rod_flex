@@ -1,6 +1,20 @@
 import numpy as np
 import matplotlib.pyplot as plt
 
+def get_tether_params(frame, triangle_tags):
+    triangle_cartesian_positions = frame.particles.position[triangle_tags]
+    global_max_edge = np.linalg.norm(triangle_cartesian_positions[:,0]-triangle_cartesian_positions[:,2],axis=1).max()
+    global_min_edge = np.linalg.norm(triangle_cartesian_positions[:,0]-triangle_cartesian_positions[:,2],axis=1).min()
+
+    avg_edge_len = (global_max_edge + global_min_edge)/2
+
+    l_min   = (2/3) * avg_edge_len
+    l_c1    = 0.85 * avg_edge_len
+    l_c0    = 1.15 * avg_edge_len
+    l_max   = (4/3) * avg_edge_len
+
+    return(l_min, l_c1, l_c0, l_max)
+
 def print_state(sigma, mesh_sigma, filler_sigma, num_filler, N_active, deltas, gravity_strength, torque_mag, job):
     print('job: ', job)
     print('statepoints: ', job.sp, '\n\n')
@@ -33,13 +47,6 @@ def print_state_to_file(sigma, mesh_sigma, filler_sigma, num_filler, N_active, d
         if torque_mag == 0:
             print('torque off', file=f)
 
-def check_for_nan_in_positions(pos_list):
-    for i, pos in enumerate(pos_list):
-        if any(np.isnan(p) or np.isinf(p) for p in pos):
-            print(f"NaN or infinity found in position {i}: {pos}")
-            return True
-    return False
-
 def get_filler_pos(num_filler,sigma,filler_sigma):
     '''
     Returns filler_sigma (ie. r_filler*2)
@@ -50,13 +57,16 @@ def get_filler_pos(num_filler,sigma,filler_sigma):
     Takes in number of filler particles and diameter of rod spheros.
     (warning that this is not generalized for more than 4 constituent particles making up the rod rigid body -- ie only works for rod_size = 3*sigma)
     '''
-    ref_theta = 2 * np.pi / num_filler
+    if num_filler == 0:
+        return []
+    else:
+        ref_theta = 2 * np.pi / num_filler
 
-    x = (3/2)*sigma - filler_sigma/2
-    a = sigma/2 - filler_sigma/2 # radius of circle to rotate filler points on (// to xy-plane)
+        x = (3/2)*sigma - filler_sigma/2
+        a = sigma/2 - filler_sigma/2 # radius of circle to rotate filler points on (// to xy-plane)
 
-    theta = np.linspace(0, 2 * np.pi, num_filler)
-    filler_pos = [[x,round(a*np.sin(i),10),round(a*np.cos(i),10)] for i in theta]
+        theta = np.linspace(0, 2 * np.pi, num_filler)
+        filler_pos = [[x,round(a*np.sin(i),10),round(a*np.cos(i),10)] for i in theta]
 
     return filler_pos
 
