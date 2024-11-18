@@ -17,7 +17,7 @@ import numpy as np
 import pandas as pd
 import pyvista as pv
 
-from utility import fibonacci_sphere, get_filler_pos, get_tether_params
+from utility import fibonacci_sphere, get_bead_pos, get_filler_pos, get_tether_params, print_state
 
 def Run_implementation(job, communicator):
     
@@ -55,18 +55,19 @@ def Run_implementation(job, communicator):
     gravity_ratio = np.abs(job.cached_statepoint['gravity_ratio'])
     N_particles = N_mesh + N_active
     
-    mesh_sigma   = 1
-    sigma        = (2/3) * R / ratio_len
-    filler_sigma = filler_diam_ratio * sigma
+    rod_size_int = int(job.cached_statepoint['rod_size_int'])
     
-    rod_size     = sigma * 3
+    mesh_sigma   = 1
+    sigma        = (2/rod_size_int) * R / ratio_len
+    rod_size     = sigma * rod_size_int
+    filler_sigma = filler_diam_ratio * sigma
     sphero_vol   = sigma**3 * (3 * rod_size - 1) / 4
+    ideal_buffer = 0.5
 
     # Adding torque:
     rand_orient     = job.cached_statepoint['rand_orient']
     active_angle    = job.cached_statepoint['active_angle']
     torque_mag      = job.cached_statepoint['torque_mag']
-    ideal_buffer    = 0.5
     
     with open(job.fn('Run.out.in_progress'), 'w') as file:
         file.write('Initializing sim seed: ' + str(simseed) + '\n')
@@ -150,12 +151,12 @@ def Run_implementation(job, communicator):
     # Construct rod rigid bodies
     #############################################    
     
-    bead_type_list = ['A_const','A_const','A_const','A_const']
-    bead_pos_list = [(sigma,0,0), (0.5*sigma,0,0), (-0.5*sigma,0,0), (-sigma,0,0)]
-    bead_orient_list = [(1,0,0,0),(1,0,0,0),(1,0,0,0),(1,0,0,0)]
+    bead_type_list = ['A_const'] * ((rod_size_int - 1) * 2)
+    bead_pos_list = get_bead_pos(rod_size_int, sigma) 
+    bead_orient_list = [(1,0,0,0)] * ((rod_size_int - 1) * 2)
     
     filler_type_list = ['A_filler'] * num_filler
-    filler_pos_list = get_filler_pos(num_filler, sigma, filler_sigma)
+    filler_pos_list = get_filler_pos(num_filler, sigma, filler_sigma, rod_size)
     filler_orient_list = [(1,0,0,0)] * num_filler
 
     const_type_list = bead_type_list + filler_type_list
@@ -241,9 +242,6 @@ def Run_implementation(job, communicator):
     ExpLJ.params[('A_filler','A_filler')] = dict(epsilon=0, 
                                                  sigma=unit_sigma, 
                                                  delta=deltas[2][2])
-    #ExpLJ.params[('A_filler','A_filler')] = dict(epsilon=1, 
-    #                                             sigma=unit_sigma, 
-    #                                             delta=deltas[2][2])
 
     ExpLJ.r_cut[('A','A'),
                 ('A_const','A'),
@@ -255,7 +253,6 @@ def Run_implementation(job, communicator):
                 ('A_filler','A_const')] = 2**(1.0/6)*unit_sigma + deltas[0][2]
     ExpLJ.r_cut[('A_filler','mesh')] = 2**(1.0/6)*(unit_sigma) + deltas[1][2]
     ExpLJ.r_cut[('A_filler','A_filler')] = 0
-    #ExpLJ.r_cut[('A_filler','A_filler')] = 2**(1.0/6)*(unit_sigma) + deltas[2][2]
 
     integrator.forces.append(ExpLJ)
 
@@ -357,6 +354,9 @@ def Run_implementation(job, communicator):
         sim.run(10000)
         gsd_oper.flush()
         print('step: ', sim.timestep)
+
+    print('\nCurrent state:')
+    print_state(sigma, mesh_sigma, filler_sigma, num_filler, N_active, deltas, gravity_strength, torque_mag, job)
 
     print('\nRunning simulation...')
     while sim.timestep < runtime:

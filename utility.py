@@ -16,21 +16,23 @@ def get_tether_params(frame, triangle_tags):
     return(l_min, l_c1, l_c0, l_max)
 
 def print_state(sigma, mesh_sigma, filler_sigma, num_filler, N_active, deltas, gravity_strength, torque_mag, job):
-    print('job: ', job)
-    print('statepoints: ', job.sp, '\n\n')
     print('sigma: ', sigma)
     print('mesh_sigma: ', mesh_sigma)
     print('filler_sigma: ', filler_sigma)
-    print('num_filler: ', num_filler)
+    print('\nnum_filler: ', num_filler)
     print('N_active: ', N_active)
-    print('deltas:')
-    print('AA: ', deltas[0][0], ' Am: ', deltas[0][1], ' Af: ', deltas[0][2], ' fm: ',deltas[1][2], ' ff: ', deltas[2][2],' mm: ', deltas[1][1])
+    print('\ndeltas:')
+    print('AA: ', deltas[0][0], '\nAm: ', deltas[0][1], '\nAf: ', deltas[0][2], '\nfm: ',deltas[1][2], '\nff: ', deltas[2][2],'\nmm: ', deltas[1][1])
     if gravity_strength == 0:
-        print('gravity off')
+        print('\ngravity off')
+    else:
+        print('\ngravity_strength: ', gravity_strength)
     if torque_mag == 0:
         print('torque off')
+    else:
+        print('gravity_strength: ', gravity_strength)
     
-def print_state_to_file(sigma, mesh_sigma, filler_sigma, num_filler, N_active, deltas, gravity_strength, torque_mag, state_log_file, job):
+    state_log_file = job.fn('state.log')
     with open(state_log_file, "w") as f:
         print('job: ', job, file=f)
         print('statepoints: ', job.sp, '\n\n', file=f)
@@ -44,10 +46,30 @@ def print_state_to_file(sigma, mesh_sigma, filler_sigma, num_filler, N_active, d
               ' fm: ', deltas[1][2], ' ff: ', deltas[2][2], ' mm: ', deltas[1][1], file=f)
         if gravity_strength == 0:
             print('gravity off', file=f)
+        else:
+            print('gravity_strength: ', gravity_strength, file=f)
         if torque_mag == 0:
             print('torque off', file=f)
+        else:
+            print('gravity_strength: ', gravity_strength, file=f)
+    
+def get_bead_pos(rod_size_int, sigma):
+    '''
+    get bead positions for given rod_size_int in active particle rigid body
+    positions are relative to rigid body frame.
+    '''
 
-def get_filler_pos(num_filler,sigma,filler_sigma):
+    num_beads = (rod_size_int - 1) * 2
+    x_coords = []
+    for i in list(range(int(num_beads/2))):
+        x_coords.append((1/2 + i/2) * sigma)
+        x_coords.append((1/2 + i/2) * -sigma)
+    x_coords = list(np.sort(x_coords))
+
+    bead_pos_list = [(x, 0, 0) for x in x_coords]
+    return bead_pos_list
+
+def get_filler_pos(num_filler,sigma,filler_sigma,rod_size):
     '''
     Returns filler_sigma (ie. r_filler*2)
     Returns the positions of the filler particles that
@@ -62,7 +84,7 @@ def get_filler_pos(num_filler,sigma,filler_sigma):
     else:
         ref_theta = 2 * np.pi / num_filler
 
-        x = (3/2)*sigma - filler_sigma/2
+        x = rod_size/2 - filler_sigma/2
         a = sigma/2 - filler_sigma/2 # radius of circle to rotate filler points on (// to xy-plane)
 
         theta = np.linspace(0, 2 * np.pi, num_filler)
