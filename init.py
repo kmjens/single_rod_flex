@@ -16,13 +16,13 @@ gridspec = {
     "R":        [8], # Radius of spherical mesh
     "kT":       [0.2],
     "gamma":    [50],
-    "k_bend":   [800],
+    "k_bend":   [500, 600, 800, 1000],
     "k_area":   [10000],
     "dt":       [0.0005],
     "N_active": [1],
     "ratio_len":[3], # [2, 3, 4], # ratio of mesh diam to rod length (decides rod const. particle)
     "v0":       [40],
-    "runtime":  [5e6],
+    "runtime":  [1e6], #[5e6],
     "equiltime": [1e5],
     "rod_size_int": [5], # rod length in units of recalculated sigma
     
@@ -31,8 +31,8 @@ gridspec = {
     "filler_diam_ratio": [0.25], # ratio of filler particle diam to A diam 
 
     # To add gravity
-    "gravity_strength": [0.2], # abs value gravity strength
-    "gravity_ratio": [2], # how much strong grav on A beads than mesh
+    "gravity_strength": [0.05, 0.2, 0.3, 0.5], # abs value gravity strength
+    "gravity_ratio": [1,2,5], # how much strong grav on A beads than mesh
     
     # To make chiral:
     "rand_orient":  ['False'],

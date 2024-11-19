@@ -292,15 +292,6 @@ def Run_implementation(job, communicator):
     ## Initialize the simulation
     #############################################
 
-    # GSD logger:
-    logger = hoomd.logging.Logger(['particle','constraint'])
-    gsd_oper = hoomd.write.GSD(trigger=hoomd.trigger.Periodic(int(50)),
-                               filename=job.fn('active.gsd'),
-                               logger=logger, mode='wb',
-                               dynamic=['momentum','property'],
-                               filter=filter_all)
-    sim.operations += gsd_oper
-
     # Initialize: 
     sim.state.thermalize_particle_momenta(filter=filter_all, kT=kT)
     sim.run(0)
@@ -308,7 +299,6 @@ def Run_implementation(job, communicator):
     
     print('Equilibrating mesh...')
     sim.run(5000)
-    gsd_oper.flush()
     
     while k_area < k_area_f:
         snapshot = sim.state.get_snapshot()
@@ -316,7 +306,6 @@ def Run_implementation(job, communicator):
             all_positions = snapshot.particles.position
             R_vert_avg = np.mean(all_positions[snapshot.particles.typeid == 0])
         TriArea = 4 * np.pi * R_vert_avg**2 / len(faces)
-        gsd_oper.flush()
         k_area *= 2
         area_potential.params.default = dict(k=k_area, A0=TriArea)
         sim.run(5000)
@@ -352,11 +341,19 @@ def Run_implementation(job, communicator):
     print('\nFinish equilibrating simulation...')
     while sim.timestep < equiltime:
         sim.run(10000)
-        gsd_oper.flush()
         print('step: ', sim.timestep)
 
     print('\nCurrent state:')
     print_state(sigma, mesh_sigma, filler_sigma, num_filler, N_active, deltas, gravity_strength, torque_mag, job)
+    
+    # GSD logger:
+    logger = hoomd.logging.Logger(['particle','constraint'])
+    gsd_oper = hoomd.write.GSD(trigger=hoomd.trigger.Periodic(int(200)),
+                               filename=job.fn('active.gsd'),
+                               logger=logger, mode='wb',
+                               dynamic=['momentum','property'],
+                               filter=filter_all)
+    sim.operations += gsd_oper
 
     print('\nRunning simulation...')
     while sim.timestep < runtime:
