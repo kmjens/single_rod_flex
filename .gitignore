@@ -5,3 +5,6 @@ __pycache__
 .signac
 *.swp
 */*.swp
+aggregated_results.csv
+heatmaps/
+heatmaps/*

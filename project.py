@@ -348,7 +348,7 @@ def Run_implementation(job, communicator):
     
     # GSD logger:
     logger = hoomd.logging.Logger(['particle','constraint'])
-    gsd_oper = hoomd.write.GSD(trigger=hoomd.trigger.Periodic(int(200)),
+    gsd_oper = hoomd.write.GSD(trigger=hoomd.trigger.Periodic(int(1000)),
                                filename=job.fn('active.gsd'),
                                logger=logger, mode='wb',
                                dynamic=['momentum','property'],

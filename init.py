@@ -17,22 +17,22 @@ gridspec = {
     "kT":       [0.2],
     "gamma":    [50],
     "k_bend":   [500, 600, 800, 1000],
-    "k_area":   [10000],
+    "k_area":   [5000, 10000],
     "dt":       [0.0005],
     "N_active": [1],
-    "ratio_len":[3], # [2, 3, 4], # ratio of mesh diam to rod length (decides rod const. particle)
+    "ratio_len":[1.5, 2, 3, 4], # [2, 3, 4], # ratio of mesh diam to rod length (decides rod const. particle)
     "v0":       [40],
-    "runtime":  [1e6], #[5e6],
+    "runtime":  [5e6],
     "equiltime": [1e5],
     "rod_size_int": [5], # rod length in units of recalculated sigma
     
     # To flatten (approx cylinders)
-    "num_filler":  [10], #[0,10], #number of filler particles to flatten spherocylinder
+    "num_filler":  [10, 15, 20], #[0,10], #number of filler particles to flatten spherocylinder
     "filler_diam_ratio": [0.25], # ratio of filler particle diam to A diam 
 
     # To add gravity
     "gravity_strength": [0.05, 0.2, 0.3, 0.5], # abs value gravity strength
-    "gravity_ratio": [1,2,5], # how much strong grav on A beads than mesh
+    "gravity_ratio": [1, 2, 5], # how much strong grav on A beads than mesh
     
     # To make chiral:
     "rand_orient":  ['False'],
