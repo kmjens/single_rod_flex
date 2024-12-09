@@ -14,7 +14,7 @@ def grid(gridspec):
 gridspec = {
     "N_mesh":   [1e3],
     "R":        [8], # Radius of spherical mesh
-    "kT":       [0.2],
+    "kT":       [2.4], #[0.2], #[2.4],
     "gamma":    [50],
     "k_bend":   [800],
     "k_area":   [5000],

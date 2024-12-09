@@ -80,19 +80,23 @@ def Run_implementation(job, communicator):
     g *= 1e12 # sim units
     NA = 6.022e23
 
-    # Mesh mass
+    rho_outer_fluid = 1.014 # g/cm^3 (from exp)
+    rho_outer_fluid *= 1e-21 * NA # AMU/nm^3 (sim units?)
+    rho_inner_fluid = 1.025 # g/cm^3 (from exp)
+    rho_inner_fluid *= 1e-21 * NA # AMU/nm^3 (sim units?) 
+    
+    # Masses
+    density_rod = 1.12 # g/cm^3 (from exp)
+    V_rod = np.pi * (3 / 2)**2 *10 # um^3 (from exp)
+    mass_rod = density_rod *1e12 * V_rod
+    
+    
     SA_flex = 4 * np.pi * R**2 # sim units (nm^2)?
     V_flex = (4 / 3) * np.pi * R**3
     mesh_area_density = 5.5528e-3  # g/m^2 (from exp)
     mesh_area_density *= NA * 1e-18 # AMU/nm^2 (sim units?)
     mesh_mass = mesh_area_density * SA_flex # sim units
     mesh_particle_mass = mesh_mass / N_mesh
-    print('mesh particle mass: ', mesh_particle_mass)
-    
-    # Particle mass
-    density_rod = 1.12 # g/cm^3 (from exp)
-    V_rod = np.pi * (3 / 2)**2 *10 # um^3 (from exp)
-    mass_rod = density_rod *1e12 * V_rod
     
     # Adjusted mesh mass
     '''
@@ -105,24 +109,19 @@ def Run_implementation(job, communicator):
     V_flex_adjusted = (4 / 3) * np.pi * (rod_size * ratio_len/2)**3
     mesh_mass_adjusted = mesh_area_density * SA_flex_adjusted
     mesh_particle_mass_adjusted = mesh_mass_adjusted / N_mesh
-    print('adjusted mesh particle mass: ', mesh_particle_mass_adjusted)
 
+    # Buoyant force and gravitational force
     F_grav_mesh = g * mesh_particle_mass_adjusted
     F_grav_rod = g * mass_rod
-    print('F_grav_mesh: ', F_grav_mesh, ' F_grav_rod: ', F_grav_rod)
-
-    # Buoyancy
-    rho_outer_fluid = 1.014 # g/cm^3 (from exp)
-    rho_outer_fluid *= 1e-21 * NA # AMU/nm^3 (sim units?)
     F_boy_mesh = g * rho_outer_fluid * V_flex_adjusted # note adjusted
-
-    rho_inner_fluid = 1.025 # g/cm^3 (from exp)
-    rho_inner_fluid *= 1e-21 * NA # AMU/nm^3 (sim units?) 
     F_boy_rod = g * rho_inner_fluid * V_rod
-    print('F_boy_mesh: ', F_boy_mesh, ' F_boy_rod: ', F_boy_rod)
-
     F_const_mesh = F_boy_mesh - F_grav_mesh
     F_const_rod = F_boy_rod - F_grav_rod
+    
+    print('mesh particle mass: ', mesh_particle_mass)
+    print('adjusted mesh particle mass: ', mesh_particle_mass_adjusted)
+    print('F_grav_mesh: ', F_grav_mesh, ' F_grav_rod: ', F_grav_rod)
+    print('F_boy_mesh: ', F_boy_mesh, ' F_boy_rod: ', F_boy_rod)
     print('F_const_mesh: ', F_boy_mesh, ' F_const_rod: ', F_boy_rod)
 
 
@@ -172,8 +171,8 @@ def Run_implementation(job, communicator):
     A_diam = [sigma] * N_active
     A_MoI = np.zeros((len(A_position),3),dtype=float)
     A_MoI[:,0] = 0
-    A_MoI[:,1] = 1.0/12*5*(rod_size*sigma)**2
-    A_MoI[:,2] = 1.0/12*5*(rod_size*sigma)**2
+    A_MoI[:,1] = 1.0 / 12 * 5 * (rod_size*sigma)**2
+    A_MoI[:,2] = 1.0 / 12 * 5 * (rod_size*sigma)**2
 
 
     #############################################
@@ -411,11 +410,13 @@ def Run_implementation(job, communicator):
     
     # GSD logger:
     logger = hoomd.logging.Logger(['particle','constraint'])
-
+    
+    # Attempt to add radius logger:
+    '''
     class RadiusLogger:
-        '''
-        Custom Logger to save radius data.
-        '''
+        
+        #Custom Logger to save radius data.
+        
         def __init__(self, sim):
             self.sim = sim
 
@@ -426,6 +427,8 @@ def Run_implementation(job, communicator):
 
     radius_logger = RadiusLogger(sim)
     logger.add(radius_logger, quantities=["Radius"])
+    '''
+
     gsd_oper = hoomd.write.GSD(trigger=hoomd.trigger.Periodic(int(200)), #int(2000)
                                filename=job.fn('active.gsd'),
                                logger=logger, mode='wb',
