@@ -43,30 +43,44 @@ def Run_implementation(job, communicator):
     
     k_bend   = job.cached_statepoint['k_bend']
     k_bond   = 4 * k_bend # based on general ratio lipid bilayers have
-    k_area_f = job.cached_statepoint['k_area']
-    k_area   = 0
+    k_area_f = job.cached_statepoint['k_area_f']
+    k_area   = job.cached_statepoint['k_area_i']
     
     # Adding active particles:
     N_active    = int(job.cached_statepoint['N_active'])
     ratio_len   = job.cached_statepoint['ratio_len'] # defines sigma
     num_filler  = job.cached_statepoint['num_filler'] # num on one active particle
-    N_filler    = num_filler * N_active # including all active particles
+    N_filler    = 2 * num_filler * N_active # including all active particles
     filler_diam_ratio = job.cached_statepoint['filler_diam_ratio']
     gravity_strength  = np.abs(job.cached_statepoint['gravity_strength']) 
     gravity_ratio = np.abs(job.cached_statepoint['gravity_ratio'])
-    N_particles = N_mesh + N_active
     
     rod_size_int = int(job.cached_statepoint['rod_size_int'])
     num_bead = ((rod_size_int - 1) * 2)
     N_bead  = num_bead * N_active 
     
+    '''
     mesh_sigma   = 1
     sigma        = (2/rod_size_int) * R / ratio_len
     rod_size     = sigma * rod_size_int
     filler_sigma = filler_diam_ratio * sigma
     sphero_vol   = (sigma ** 3) * (3 * rod_size - 1) / 4 # approx as spherocylinder
     ideal_buffer = 0.5
+    
+    '''
+    # with R and sigma  dependence switched
+    sigma        = 1
+    mesh_sigma   = 0.333 * sigma
+    rod_size     = rod_size_int
+    R            = (sigma / 2) * ratio_len * rod_size
+    filler_sigma  = filler_diam_ratio * sigma
+    sphero_vol   = (sigma ** 3) * (3 * rod_size - 1) / 4 # approx as spherocylinder
+    ideal_buffer = 0.5
+    N_mesh = int(np.ceil(4 * np.pi * R**2 * 0.8))
 
+    N_particles = N_mesh + N_active
+    
+    
     # Adding torque:
     rand_orient     = job.cached_statepoint['rand_orient']
     active_angle    = job.cached_statepoint['active_angle']
@@ -76,26 +90,34 @@ def Run_implementation(job, communicator):
     ## Real units:
     #############################################
     
-    g = 9.8 # m/s^2
-    g *= 1e12 # sim units
-    NA = 6.022e23
+    # Conversion Factors
+    mass_conv = 3.13e-5         # kg per 1 sim units 
+    len_conv = 3e-6             # m per 1 sim units (ie 3um)
+    energy_conv = 2.0709735e-20 # J per 1 sim units (ie 5kT)
+    time_conv = 116.2           # sec per 1 sim units
 
-    rho_outer_fluid = 1.014 # g/cm^3 (from exp)
-    rho_outer_fluid *= 1e-21 * NA # AMU/nm^3 (sim units?)
-    rho_inner_fluid = 1.025 # g/cm^3 (from exp)
-    rho_inner_fluid *= 1e-21 * NA # AMU/nm^3 (sim units?) 
+    # Experimental values
+    rho_rod = 1.12              # kg/m^3
+    rho_outer_fluid = 1.014     # kg/m^3
+    rho_inner_fluid = 1.025     # kg/m^3
+    rho_mesh_V = 0.88           # kg/m^3
+    mesh_thickness = 6.31e-9    # m
+    mesh_area_density = rho_mesh_V * mesh_thickness # kg/m^2
+
+    # convert params to sim units
+    g = 9.8 * (time_conv)**2 / mass_conv
+
+    rho_rod *= len_conv**3 / mass_conv
+    rho_outer_fluid *= len_conv**3 / mass_conv
+    rho_inner_fluid *= len_conv**3 / mass_conv
     
-    # Masses
-    density_rod = 1.12 # g/cm^3 (from exp)
-    V_rod = np.pi * (3 / 2)**2 *10 # um^3 (from exp)
-    mass_rod = density_rod *1e12 * V_rod
+    V_rod = 10 * np.pi * (1 / 2)**2 * (10/3)    # sim units
+    mass_rod = V_rod * rho_rod                  # sim units
     
-    
-    SA_flex = 4 * np.pi * R**2 # sim units (nm^2)?
+    SA_flex = 4 * np.pi * R**2
     V_flex = (4 / 3) * np.pi * R**3
-    mesh_area_density = 5.5528e-3  # g/m^2 (from exp)
-    mesh_area_density *= NA * 1e-18 # AMU/nm^2 (sim units?)
-    mesh_mass = mesh_area_density * SA_flex # sim units
+    mesh_area_density *= len_conv**2 / mass_conv
+    mesh_mass = mesh_area_density * SA_flex
     mesh_particle_mass = mesh_mass / N_mesh
     
     # Adjusted mesh mass
@@ -111,7 +133,7 @@ def Run_implementation(job, communicator):
     mesh_particle_mass_adjusted = mesh_mass_adjusted / N_mesh
 
     # Buoyant force and gravitational force
-    F_grav_mesh = g * mesh_particle_mass_adjusted
+    F_grav_mesh = g * mesh_particle_mass_adjusted # note adjusted
     F_grav_rod = g * mass_rod
     F_boy_mesh = g * rho_outer_fluid * V_flex_adjusted # note adjusted
     F_boy_rod = g * rho_inner_fluid * V_rod
@@ -212,9 +234,9 @@ def Run_implementation(job, communicator):
     bead_orient_list = [(1,0,0,0)] * num_bead
     bead_diam = [sigma] * N_bead 
     
-    filler_type_list = ['A_filler'] * num_filler
+    filler_type_list = ['A_filler'] * (2 * num_filler)
     filler_pos_list = get_filler_pos(num_filler, sigma, filler_sigma, rod_size)
-    filler_orient_list = [(1,0,0,0)] * num_filler
+    filler_orient_list = [(1,0,0,0)] * (2 * num_filler)
     filler_diam = [filler_sigma] * N_filler
 
     const_type_list = bead_type_list + filler_type_list
@@ -274,7 +296,7 @@ def Run_implementation(job, communicator):
     ## Add potentials
     #############################################
     
-    cell = hoomd.md.nlist.Cell(buffer=0.4, exclusions=['meshbond','body'])
+    cell = hoomd.md.nlist.Cell(buffer=ideal_buffer, exclusions=['meshbond','body'])
 
     # Expanded LJ:
     ExpLJ = hoomd.md.pair.ExpandedLJ(nlist=cell, mode="shift", default_r_cut=0)
@@ -336,7 +358,6 @@ def Run_implementation(job, communicator):
     integrator.forces.append(helfrich_potential)
 
     # Area conservation potential:
-    k_area = 50
     TriArea = 4 * np.pi * R**2 / len(faces)
     area_potential = hoomd.md.mesh.conservation.TriangleArea(mesh_obj)
     area_potential.params.default = dict(k=k_area, A0=TriArea)
@@ -380,11 +401,14 @@ def Run_implementation(job, communicator):
     # Add gravity:
     print('\nAdding gravity...')
     mass_mesh_particle = 1
-    #mass_frac = mass_mesh_particle * sphero_vol / (4/3* np.pi * mesh_sigma**3)
     gravity = hoomd.md.force.Constant(filter=hoomd.filter.All())
-    gravity.constant_force['A'] = (0,0,-gravity_strength)
+    #gravity.constant_force['A'] = (0,0,-gravity_strength)
+    gravity.constant_force['A'] = (0,0,F_const_rod)
+    gravity.constant_force['A'] = (0,0,0)
     gravity.constant_force['A_const','A_filler'] = (0,0,0)
-    gravity.constant_force['mesh'] = (0,0,-gravity_strength)
+    #gravity.constant_force['mesh'] = (0,0,-gravity_strength)
+    gravity.constant_force['mesh'] = (0,0,F_const_mesh)
+    gravity.constant_force['mesh'] = (0,0,0)
     gravity.constant_torque['mesh','A','A_const','A_filler'] = (0,0,0)
 
     integrator.forces.append(gravity)
@@ -406,7 +430,7 @@ def Run_implementation(job, communicator):
         print('step: ', sim.timestep)
 
     print('\nCurrent state:')
-    print_state(sigma, mesh_sigma, filler_sigma, num_filler, N_active, deltas, gravity_strength, torque_mag, job)
+    print_state(sigma, mesh_sigma, filler_sigma, num_filler, N_active, N_mesh, deltas, gravity_strength, torque_mag, job)
     
     # GSD logger:
     logger = hoomd.logging.Logger(['particle','constraint'])
@@ -432,7 +456,7 @@ def Run_implementation(job, communicator):
     gsd_oper = hoomd.write.GSD(trigger=hoomd.trigger.Periodic(int(200)), #int(2000)
                                filename=job.fn('active.gsd'),
                                logger=logger, mode='wb',
-                               dynamic=['momentum','property'],
+                               dynamic=['momentum','property','attribute'],
                                filter=filter_all)
     sim.operations += gsd_oper
 

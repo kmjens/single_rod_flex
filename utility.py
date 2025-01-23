@@ -1,5 +1,16 @@
+import json
+import matplotlib
+import os
+import signac
+
 import numpy as np
 import matplotlib.pyplot as plt
+import pandas as pd
+import seaborn as sns
+
+from itertools import combinations
+from collections import defaultdict
+
 
 def get_tether_params(frame, triangle_tags):
     triangle_cartesian_positions = frame.particles.position[triangle_tags]
@@ -15,12 +26,13 @@ def get_tether_params(frame, triangle_tags):
 
     return(l_min, l_c1, l_c0, l_max)
 
-def print_state(sigma, mesh_sigma, filler_sigma, num_filler, N_active, deltas, gravity_strength, torque_mag, job):
+def print_state(sigma, mesh_sigma, filler_sigma, num_filler, N_active, N_mesh, deltas, gravity_strength, torque_mag, job):
     print('sigma: ', sigma)
     print('mesh_sigma: ', mesh_sigma)
     print('filler_sigma: ', filler_sigma)
     print('\nnum_filler: ', num_filler)
     print('N_active: ', N_active)
+    print('N_mesh: ', N_mesh)
     print('\ndeltas:')
     print('AA: ', deltas[0][0], '\nAm: ', deltas[0][1], '\nAf: ', deltas[0][2], '\nfm: ',deltas[1][2], '\nff: ', deltas[2][2],'\nmm: ', deltas[1][1])
     if gravity_strength == 0:
@@ -41,6 +53,7 @@ def print_state(sigma, mesh_sigma, filler_sigma, num_filler, N_active, deltas, g
         print('filler_sigma: ', filler_sigma, file=f)
         print('num_filler: ', num_filler, file=f)
         print('N_active: ', N_active, file=f)
+        print('N_mesh: ', N_mesh)
         print('deltas:', file=f)
         print('AA: ', deltas[0][0], ' Am: ', deltas[0][1], ' Af: ', deltas[0][2], 
               ' fm: ', deltas[1][2], ' ff: ', deltas[2][2], ' mm: ', deltas[1][1], file=f)
@@ -88,7 +101,10 @@ def get_filler_pos(num_filler,sigma,filler_sigma,rod_size):
         a = sigma/2 - filler_sigma/2 # radius of circle to rotate filler points on (// to xy-plane)
 
         theta = np.linspace(0, 2 * np.pi, num_filler)
-        filler_pos = [[x,round(a*np.sin(i),10),round(a*np.cos(i),10)] for i in theta]
+        #filler_pos = [[x,round(a*np.sin(i),10),round(a*np.cos(i),10)] for i in theta]
+        neg_filler_pos = [[-x,round(a*np.sin(i),10),round(a*np.cos(i),10)] for i in theta]
+        pos_filler_pos = [[x,round(a*np.sin(i),10),round(a*np.cos(i),10)] for i in theta]
+        filler_pos = neg_filler_pos + pos_filler_pos
 
     return filler_pos
 
@@ -269,3 +285,111 @@ def find_mesh_radius_avg_and_std(sim):
     AVGrad = np.mean(rad)
     STDrad = np.std(rad)
     return AVGrad, STDrad
+
+
+class PlottingFxns:
+    def __init__(self):
+        self.project = None
+        self.key_of_interest = []
+        self.data_values = ["MSD_correlation"]
+        self.df = None
+
+
+    def aggregate_results(self):
+        print("Aggregating results...")
+        all_results = []
+
+        self.project = signac.get_project()
+        for job in self.project:
+            try:
+                with open(job.fn('analysis_data.json'), 'r') as f:
+                    data = json.load(f)
+                    all_results.append(data)
+            except FileNotFoundError:
+                print(f"Missing analysis_data.json for job: {job.id}")
+
+        self.df = pd.DataFrame(all_results)
+        self.df.to_csv("aggregated_results.csv", index=False)
+
+
+    def collect_values(self):
+        print('Collecting statepoint values...')
+
+        statepoint_values = defaultdict(set)
+        for job in self.project:
+            for key, value in job.sp.items():
+                if key != "seed":
+                    statepoint_values[key].add(value)
+
+        # Determine keys of interest (those with multiple values)
+        self.keys_of_interest = [key for key, values in statepoint_values.items() if len(values) > 1]
+
+        assert all(key in self.df.columns for key in self.keys_of_interest), "Some keys are missing in the DataFrame."
+        assert all(data_value in self.df.columns for data_value in self.data_values), "Data value column is missing in the DataFrame."
+
+    def plot_heatmaps(self):
+        print('Begin plotting heatmaps...')
+
+        # Make directories as needed
+        os.makedirs('plots/heatmaps', exist_ok=True)
+        for data_value in self.data_values:
+            os.makedirs(f"plots/heatmaps/{data_value}", exist_ok=True)
+            for i, y_key in enumerate(self.keys_of_interest):
+                for x_key in self.keys_of_interest[i + 1:]:
+                    os.makedirs(f"plots/heatmaps/{data_value}/{x_key}_V_{y_key}", exist_ok=True)
+        
+        # Plot for every key of interest for every combo of other keys
+        for i, y_key in enumerate(self.keys_of_interest):
+            for x_key in self.keys_of_interest[i + 1:]:
+
+                print('Producing heat maps for: ', x_key,' VS ',y_key,'...')
+                other_keys = [key for key in self.keys_of_interest if key not in (y_key, x_key)]
+                grouped = self.df.groupby(other_keys)
+
+                for group_values, group_df in grouped:
+                    group_dict = dict(zip(other_keys, group_values))
+
+                    num_filler = group_dict.pop('num_filler', None)
+                    group_title = ", ".join([f"{key}={value}" for key, value in group_dict.items()])
+                    group_label = "_".join([f"{key}={value}" for key, value in group_dict.items()])
+
+
+                    for data_value in self.data_values:
+                        if num_filler is not None:
+                            num_filler_dir = f"final_heatmaps/{data_value}/{x_key}_V_{y_key}/num_filler_{num_filler}"
+                            if not os.path.exists(num_filler_dir):
+                                os.makedirs(num_filler_dir)
+                        else:
+                            num_filler_dir = f"final_heatmaps/{data_value}/{x_key}_V_{y_key}"
+                            if not os.path.exists(num_filler_dir):
+                                os.makedirs(num_filler_dir)
+
+                        pivot_table = group_df.pivot_table(index=y_key, columns=x_key, values=data_value)
+                        if not pivot_table.empty:
+                            plt.figure(figsize=(10, 8))
+                            sns.heatmap(pivot_table, annot=True, fmt=".2f",
+                                        cmap="viridis", cbar_kws={'label': data_value},
+                                        vmin=-1, vmax=1)
+                            plt.title(f"{data_value} as a function of {x_key} and {y_key}\n({group_title})")
+                            plt.xlabel(x_key)
+                            plt.ylabel(y_key)
+                            plt.savefig(f"{num_filler_dir}/heatmap_{group_label}.png")
+                            plt.close()
+                            print(f"SUCCESS: {group_title}...")
+                        else:
+                            print(f"NAN For: {group_title}...")
+
+                print('\n')
+        print('Heatmap plotting function completed.')
+
+
+    def plot_lines(self):
+        print('Begin plotting line plots...')
+        
+        # Make directories as needed
+        os.makedirs('plots/linear', exist_ok=True)
+        for data_value in self.data_values:
+            os.makedirs(f"plots/linear/{data_value}", exist_ok=True)
+            for i, y_key in enumerate(self.keys_of_interest):
+                for x_key in self.keys_of_interest[i + 1:]:
+                    os.makedirs(f"plots/linear/{data_value}/{x_key}_V_{y_key}", exist_ok=True)
