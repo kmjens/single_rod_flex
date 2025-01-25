@@ -8,3 +8,5 @@ __pycache__
 aggregated_results.csv
 heatmaps/
 heatmaps/*
+.DS_Store
+
