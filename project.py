@@ -46,34 +46,35 @@ def Run_implementation(job, communicator):
     k_area_f = job.cached_statepoint['k_area_f']
     k_area   = job.cached_statepoint['k_area_i']
     
-    # Adding active particles:
-    N_active    = int(job.cached_statepoint['N_active'])
-    num_beads   = int(job.cached_statepoint['num_beads']) #number of beads including the center particle in rigid body
-    num_const_beads = int(num_beads - 1)
-    aspect_rat  = job.cached_statepoint['aspect_rat'] # aspect ratio of rod length to diam
-    freedom_rat = job.cached_statepoint['freedom_rat'] # ratio of flex diam to rod length
-    num_filler  = job.cached_statepoint['num_filler'] # num on one active particle
-    N_filler    = 2 * num_filler * N_active # including all active particles
+    # Particle and mesh size scaling:
+    aspect_rat      = job.cached_statepoint['aspect_rat'] # aspect ratio of rod length to diam
+    freedom_rat     = job.cached_statepoint['freedom_rat'] # ratio of flex diam to rod length
     filler_diam_ratio = job.cached_statepoint['filler_diam_ratio']
-    gravity_strength  = np.abs(job.cached_statepoint['gravity_strength']) 
-    gravity_ratio = np.abs(job.cached_statepoint['gravity_ratio'])
-    N_bead  = num_const_beads * N_active 
     
-    # with R and sigma  dependence switched
     sigma        = 1
     mesh_sigma   = 0.333 * sigma
+    filler_sigma = filler_diam_ratio * sigma
+    
     rod_length   = aspect_rat * sigma
     bead_spacing = (rod_length / 2) - (sigma / 2) 
-    R            = (freedom_rat * rod_length) / 2
-    filler_sigma = filler_diam_ratio * sigma
     sphero_vol   = (sigma ** 3) * (3 * rod_length - 1) / 4 # approx as spherocylinder
     ideal_buffer = 0.5
-    N_mesh       = int(np.ceil(4 * np.pi * R**2 * 0.8))
-
-    N_particles = N_mesh + N_active
+    R            = (freedom_rat * rod_length) / 2
     
+    # Number of Particles
+    N_mesh      = int(np.ceil(4 * np.pi * R**2 * 0.8))
+    N_active    = int(job.cached_statepoint['N_active'])
+    num_filler  = job.cached_statepoint['num_filler'] # num on one active particle
+    N_filler    = 2 * num_filler * N_active # including all active particles
+    num_beads   = int(job.cached_statepoint['num_beads']) #number of beads including the center particle in rigid body
+    num_const_beads = int(num_beads - 1) # neglecting middle particle
+    N_bead      = num_const_beads * N_active 
+    N_particles = N_mesh + N_active # number of mesh particles plus number of rigid bodies
     
-    # Adding torque:
+    # Adding gravity and torque:
+    gravity_strength  = np.abs(job.cached_statepoint['gravity_strength']) 
+    gravity_ratio   = np.abs(job.cached_statepoint['gravity_ratio'])
+    
     rand_orient     = job.cached_statepoint['rand_orient']
     active_angle    = job.cached_statepoint['active_angle']
     torque_mag      = job.cached_statepoint['torque_mag']
@@ -238,6 +239,7 @@ def Run_implementation(job, communicator):
 
     
     # Create initial gsd
+    snapshot = sim.state.get_snapshot()
     frame = gsd.hoomd.Frame()
     frame.particles.N = len(snapshot.particles.position)
     frame.particles.position = snapshot.particles.position
