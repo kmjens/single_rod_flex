@@ -26,11 +26,12 @@ gridspec = {
     "k_area_i": [100],
     "dt":       [0.0005],
     "N_active": [1],
-    "ratio_len":[2], # [2, 3, 4], # ratio of mesh diam to rod length (decides rod const. particle)
+    "num_beads": [9], #[5,7],
+    "aspect_rat": [5], #[3,4,5], # rod length in units of recalculated sigma
+    "freedom_rat":[3], # [2, 3, 4], # ratio of mesh diam to rod length (decides rod const. particle)
     "v0":       [40],
     "runtime":  [2e5], #[5e6],
     "equiltime": [1e5], #[1e5],
-    "rod_size_int": [9], # rod length in units of recalculated sigma
     
     # To flatten (approx cylinders)
     "num_filler":  [20], #[0,10], #number of filler particles to flatten spherocylinder

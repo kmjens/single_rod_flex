@@ -48,35 +48,27 @@ def Run_implementation(job, communicator):
     
     # Adding active particles:
     N_active    = int(job.cached_statepoint['N_active'])
-    ratio_len   = job.cached_statepoint['ratio_len'] # defines sigma
+    num_beads   = int(job.cached_statepoint['num_beads']) #number of beads including the center particle in rigid body
+    num_const_beads = int(num_beads - 1)
+    aspect_rat  = job.cached_statepoint['aspect_rat'] # aspect ratio of rod length to diam
+    freedom_rat = job.cached_statepoint['freedom_rat'] # ratio of flex diam to rod length
     num_filler  = job.cached_statepoint['num_filler'] # num on one active particle
     N_filler    = 2 * num_filler * N_active # including all active particles
     filler_diam_ratio = job.cached_statepoint['filler_diam_ratio']
     gravity_strength  = np.abs(job.cached_statepoint['gravity_strength']) 
     gravity_ratio = np.abs(job.cached_statepoint['gravity_ratio'])
+    N_bead  = num_const_beads * N_active 
     
-    rod_size_int = int(job.cached_statepoint['rod_size_int'])
-    num_bead = ((rod_size_int - 1) * 2)
-    N_bead  = num_bead * N_active 
-    
-    '''
-    mesh_sigma   = 1
-    sigma        = (2/rod_size_int) * R / ratio_len
-    rod_size     = sigma * rod_size_int
-    filler_sigma = filler_diam_ratio * sigma
-    sphero_vol   = (sigma ** 3) * (3 * rod_size - 1) / 4 # approx as spherocylinder
-    ideal_buffer = 0.5
-    
-    '''
     # with R and sigma  dependence switched
     sigma        = 1
     mesh_sigma   = 0.333 * sigma
-    rod_size     = rod_size_int
-    R            = (sigma / 2) * ratio_len * rod_size
-    filler_sigma  = filler_diam_ratio * sigma
-    sphero_vol   = (sigma ** 3) * (3 * rod_size - 1) / 4 # approx as spherocylinder
+    rod_length   = aspect_rat * sigma
+    bead_spacing = (rod_length / 2) - (sigma / 2) 
+    R            = (freedom_rat * rod_length) / 2
+    filler_sigma = filler_diam_ratio * sigma
+    sphero_vol   = (sigma ** 3) * (3 * rod_length - 1) / 4 # approx as spherocylinder
     ideal_buffer = 0.5
-    N_mesh = int(np.ceil(4 * np.pi * R**2 * 0.8))
+    N_mesh       = int(np.ceil(4 * np.pi * R**2 * 0.8))
 
     N_particles = N_mesh + N_active
     
@@ -120,28 +112,15 @@ def Run_implementation(job, communicator):
     mesh_mass = mesh_area_density * SA_flex
     mesh_particle_mass = mesh_mass / N_mesh
     
-    # Adjusted mesh mass
-    '''
-    Because I set my sim up opposite to exp. 
-    In my sim I change the rod size -- but in exp they change the flexicle size.
-    Need to edit later. Until then:
-    This finds an adjusted effective mass of the flexicle (ie. scales the whole system.
-    '''
-    SA_flex_adjusted = 4 * np.pi * (rod_size * ratio_len/2)**2
-    V_flex_adjusted = (4 / 3) * np.pi * (rod_size * ratio_len/2)**3
-    mesh_mass_adjusted = mesh_area_density * SA_flex_adjusted
-    mesh_particle_mass_adjusted = mesh_mass_adjusted / N_mesh
-
     # Buoyant force and gravitational force
-    F_grav_mesh = g * mesh_particle_mass_adjusted # note adjusted
+    F_grav_mesh = g * mesh_particle_mass
     F_grav_rod = g * mass_rod
-    F_boy_mesh = g * rho_outer_fluid * V_flex_adjusted # note adjusted
+    F_boy_mesh = g * rho_outer_fluid * V_flex
     F_boy_rod = g * rho_inner_fluid * V_rod
     F_const_mesh = F_boy_mesh - F_grav_mesh
     F_const_rod = F_boy_rod - F_grav_rod
     
     print('mesh particle mass: ', mesh_particle_mass)
-    print('adjusted mesh particle mass: ', mesh_particle_mass_adjusted)
     print('F_grav_mesh: ', F_grav_mesh, ' F_grav_rod: ', F_grav_rod)
     print('F_boy_mesh: ', F_boy_mesh, ' F_boy_rod: ', F_boy_rod)
     print('F_const_mesh: ', F_boy_mesh, ' F_const_rod: ', F_boy_rod)
@@ -193,8 +172,8 @@ def Run_implementation(job, communicator):
     A_diam = [sigma] * N_active
     A_MoI = np.zeros((len(A_position),3),dtype=float)
     A_MoI[:,0] = 0
-    A_MoI[:,1] = 1.0 / 12 * 5 * (rod_size*sigma)**2
-    A_MoI[:,2] = 1.0 / 12 * 5 * (rod_size*sigma)**2
+    A_MoI[:,1] = 1.0 / 12 * 5 * (rod_length * sigma)**2
+    A_MoI[:,2] = 1.0 / 12 * 5 * (rod_length * sigma)**2
 
 
     #############################################
@@ -229,13 +208,13 @@ def Run_implementation(job, communicator):
     # Construct rod rigid bodies
     #############################################    
     
-    bead_type_list = ['A_const'] * num_bead
-    bead_pos_list = get_bead_pos(rod_size_int, sigma) 
-    bead_orient_list = [(1,0,0,0)] * num_bead
+    bead_type_list = ['A_const'] * N_bead
+    bead_pos_list = get_bead_pos(bead_spacing, sigma, num_const_beads) 
+    bead_orient_list = [(1,0,0,0)] * N_bead
     bead_diam = [sigma] * N_bead 
     
     filler_type_list = ['A_filler'] * (2 * num_filler)
-    filler_pos_list = get_filler_pos(num_filler, sigma, filler_sigma, rod_size)
+    filler_pos_list = get_filler_pos(num_filler, sigma, filler_sigma, rod_length)
     filler_orient_list = [(1,0,0,0)] * (2 * num_filler)
     filler_diam = [filler_sigma] * N_filler
 
@@ -255,6 +234,7 @@ def Run_implementation(job, communicator):
 
     diameter = np.append(diameter, bead_diam, axis=0)
     diameter = np.append(diameter, filler_diam, axis=0)
+    print('check diam: ', diameter)
 
     
     # Create initial gsd
@@ -430,34 +410,16 @@ def Run_implementation(job, communicator):
         print('step: ', sim.timestep)
 
     print('\nCurrent state:')
-    print_state(sigma, mesh_sigma, filler_sigma, num_filler, N_active, N_mesh, deltas, gravity_strength, torque_mag, job)
+    print_state(sigma, mesh_sigma, filler_sigma, num_filler, N_active, num_beads, bead_spacing, N_mesh, R, aspect_rat, freedom_rat, deltas, gravity_strength, torque_mag, job)
     
     # GSD logger:
     logger = hoomd.logging.Logger(['particle','constraint'])
-    
-    # Attempt to add radius logger:
-    '''
-    class RadiusLogger:
-        
-        #Custom Logger to save radius data.
-        
-        def __init__(self, sim):
-            self.sim = sim
-
-        @hoomd.logging.log(category="particles")
-        def diameter(self):
-            snapshot = self.sim.state.snapshot
-            return snapshot.particles.diameters / 2
-
-    radius_logger = RadiusLogger(sim)
-    logger.add(radius_logger, quantities=["Radius"])
-    '''
-
     gsd_oper = hoomd.write.GSD(trigger=hoomd.trigger.Periodic(int(200)), #int(2000)
                                filename=job.fn('active.gsd'),
                                logger=logger, mode='wb',
-                               dynamic=['momentum','property','attribute'],
+                               dynamic=['momentum','property','attribute/particles/diameter'],
                                filter=filter_all)
+    gsd_oper.write_diameter = True
     sim.operations += gsd_oper
 
     print('\nRunning simulation...')
