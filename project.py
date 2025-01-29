@@ -238,19 +238,22 @@ def Run_implementation(job, communicator):
 
     
     # Create initial gsd
-    snapshot = sim.state.get_snapshot()
     frame = gsd.hoomd.Frame()
     frame.particles.N = len(snapshot.particles.position)
     frame.particles.position = snapshot.particles.position
     frame.particles.orientation = snapshot.particles.orientation
     frame.particles.typeid = snapshot.particles.typeid
-    frame.particles.diameter = diameter[0:frame.particles.N]
+    frame.particles.diameter = diameter
     frame.particles.types = snapshot.particles.types
+    frame.particles.body = snapshot.particles.body
     frame.configuration.box = snapshot.configuration.box
     
     with gsd.hoomd.open(name=job.fn('initial_wRigid.gsd'), mode='w') as f:
         f.append(frame)
 
+    
+    sim = hoomd.Simulation(device=device)
+    state = sim.create_state_from_gsd(filename=job.fn('initial_wRigid.gsd'))
 
     #############################################    
     ## Set up filters and integrator
@@ -270,7 +273,6 @@ def Run_implementation(job, communicator):
     langevin.gamma.default = gamma
     langevin.gamma_r.default = [gamma,gamma,gamma]
     integrator.methods.append(langevin)
-
 
     #############################################
     ## Add potentials
@@ -355,10 +357,16 @@ def Run_implementation(job, communicator):
     ## Initialize the simulation
     #############################################
 
+    snap = sim.state.get_snapshot()
+    print('after potentials:', snap.particles.diameter)
+    
     # Initialize: 
     sim.state.thermalize_particle_momenta(filter=filter_all, kT=kT)
     sim.run(0)
     print('Successfully ran for 0 timestep.\n')
+    
+    snap = sim.state.get_snapshot()
+    print('particle size:', snap.particles.diameter)
     
     print('Equilibrating mesh...')
     sim.run(5000)
@@ -411,6 +419,7 @@ def Run_implementation(job, communicator):
 
     print('\nCurrent state:')
     print_state(sigma, mesh_sigma, filler_sigma, num_filler, N_active, num_beads, bead_spacing, N_mesh, R, aspect_rat, freedom_rat, deltas, gravity_strength, torque_mag, job)
+   
     
     # GSD logger:
     logger = hoomd.logging.Logger(['particle','constraint'])
@@ -431,6 +440,9 @@ def Run_implementation(job, communicator):
     os.rename(job.fn('Run.out.in_progress'), job.fn('Run.out'))
     
     print('Simulation complete.')
+
+    snap = sim.state.get_snapshot()
+    print('particle size:', snap.particles.diameter)
 
 def Run(*jobs):
     processes_per_directory = os.environ['ACTION_PROCESSES_PER_DIRECTORY']
