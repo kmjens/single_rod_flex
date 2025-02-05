@@ -40,7 +40,8 @@ class JobParser:
         # Particle and mesh size scaling:
         self.aspect_rat      = job.cached_statepoint['aspect_rat'] # aspect ratio of rod length to diam
         self.freedom_rat     = job.cached_statepoint['freedom_rat'] # ratio of flex diam to rod length
-        self.filler_diam_rat = job.cached_statepoint['filler_diam_rat']
+        self.flattener_sigma_rat = job.cached_statepoint['flattener_diam_rat']
+        self.mesh_sigma_rat = job.cached_statepoint['mesh_sigma_diam_rat']
 
         # Adding gravity and torque:
         self.gravity_strength  = np.abs(job.cached_statepoint['gravity_strength'])
@@ -121,11 +122,11 @@ def get_tether_params(frame, triangle_tags):
 
     return(l_min, l_c1, l_c0, l_max)
 
-def print_state(sigma, mesh_sigma, filler_sigma, num_filler, N_active, num_beads, bead_spacing, N_mesh, R, aspect_rat, freedom_rat, deltas, gravity_strength, torque_mag, job):
+def print_state(sigma, mesh_sigma, flattener_sigma, num_flattener, N_active, num_beads, bead_spacing, N_mesh, R, aspect_rat, freedom_rat, deltas, gravity_strength, torque_mag, job):
     print('sigma: ', sigma)
     print('mesh_sigma: ', mesh_sigma)
-    print('filler_sigma: ', filler_sigma)
-    print('\nnum_filler: ', num_filler)
+    print('flattener_sigma: ', flattener_sigma)
+    print('\nnum_flattener: ', num_flattener)
     print('N_active: ', N_active)
     print('num_beads: ', num_beads)
     print('bead_spacing:', bead_spacing)
@@ -150,8 +151,8 @@ def print_state(sigma, mesh_sigma, filler_sigma, num_filler, N_active, num_beads
         print('statepoints: ', job.sp, '\n\n', file=f)
         print('sigma: ', sigma, file=f)
         print('mesh_sigma: ', mesh_sigma, file=f)
-        print('filler_sigma: ', filler_sigma, file=f)
-        print('num_filler: ', num_filler, file=f)
+        print('flattener_sigma: ', flattener_sigma, file=f)
+        print('num_flattener: ', num_flattener, file=f)
         print('N_active: ', N_active, file=f)
         print('num_beads: ', num_beads)
         print('bead_spacing:', bead_spacing)
@@ -186,30 +187,30 @@ def get_bead_pos(bead_spacing, sigma, num_const_beads):
     bead_pos_list = [(x, 0, 0) for x in x_coords]
     return bead_pos_list
 
-def get_filler_pos(num_filler,sigma,filler_sigma,rod_length):
+def get_flattener_pos(num_flattener,sigma,flattener_sigma,rod_length):
     '''
-    Returns filler_sigma (ie. r_filler*2)
-    Returns the positions of the filler particles that
+    Returns flattener_sigma (ie. r_flattener*2)
+    Returns the positions of the flattener particles that
     flatten the spherocylinder relative to 
     the origin of the rigid body as a list [[x1,y1,z1],[x2,y2,z2],...]
 
-    Takes in number of filler particles and diameter of rod spheros.
+    Takes in number of flattener particles and diameter of rod spheros.
     '''
-    if num_filler == 0:
+    if num_flattener == 0:
         return []
     else:
-        ref_theta = 2 * np.pi / num_filler
+        ref_theta = 2 * np.pi / num_flattener
 
-        x = rod_length/2 - filler_sigma/2
-        a = sigma/2 - filler_sigma/2 # radius of circle to rotate filler points on (// to xy-plane)
+        x = rod_length/2 - flattener_sigma/2
+        a = sigma/2 - flattener_sigma/2 # radius of circle to rotate flattener points on (// to xy-plane)
 
-        theta = np.linspace(0, 2 * np.pi, num_filler)
-        #filler_pos = [[x,round(a*np.sin(i),10),round(a*np.cos(i),10)] for i in theta]
-        neg_filler_pos = [[-x,round(a*np.sin(i),10),round(a*np.cos(i),10)] for i in theta]
-        pos_filler_pos = [[x,round(a*np.sin(i),10),round(a*np.cos(i),10)] for i in theta]
-        filler_pos = neg_filler_pos + pos_filler_pos
+        theta = np.linspace(0, 2 * np.pi, num_flattener)
+        #flattener_pos = [[x,round(a*np.sin(i),10),round(a*np.cos(i),10)] for i in theta]
+        neg_flattener_pos = [[-x,round(a*np.sin(i),10),round(a*np.cos(i),10)] for i in theta]
+        pos_flattener_pos = [[x,round(a*np.sin(i),10),round(a*np.cos(i),10)] for i in theta]
+        flattener_pos = neg_flattener_pos + pos_flattener_pos
 
-    return filler_pos
+    return flattener_pos
 
 
 def fibonacci_sphere(num_pts, R):
@@ -452,20 +453,20 @@ class PlottingFxns:
                 for group_values, group_df in grouped:
                     group_dict = dict(zip(other_keys, group_values))
 
-                    num_filler = group_dict.pop('num_filler', None)
+                    num_flattener = group_dict.pop('num_flattener', None)
                     group_title = ", ".join([f"{key}={value}" for key, value in group_dict.items()])
                     group_label = "_".join([f"{key}={value}" for key, value in group_dict.items()])
 
 
                     for data_value in self.data_values:
-                        if num_filler is not None:
-                            num_filler_dir = f"final_heatmaps/{data_value}/{x_key}_V_{y_key}/num_filler_{num_filler}"
-                            if not os.path.exists(num_filler_dir):
-                                os.makedirs(num_filler_dir)
+                        if num_flattener is not None:
+                            num_flattener_dir = f"final_heatmaps/{data_value}/{x_key}_V_{y_key}/num_flattener_{num_flattener}"
+                            if not os.path.exists(num_flattener_dir):
+                                os.makedirs(num_flattener_dir)
                         else:
-                            num_filler_dir = f"final_heatmaps/{data_value}/{x_key}_V_{y_key}"
-                            if not os.path.exists(num_filler_dir):
-                                os.makedirs(num_filler_dir)
+                            num_flattener_dir = f"final_heatmaps/{data_value}/{x_key}_V_{y_key}"
+                            if not os.path.exists(num_flattener_dir):
+                                os.makedirs(num_flattener_dir)
 
                         pivot_table = group_df.pivot_table(index=y_key, columns=x_key, values=data_value)
                         if not pivot_table.empty:
@@ -476,7 +477,7 @@ class PlottingFxns:
                             plt.title(f"{data_value} as a function of {x_key} and {y_key}\n({group_title})")
                             plt.xlabel(x_key)
                             plt.ylabel(y_key)
-                            plt.savefig(f"{num_filler_dir}/heatmap_{group_label}.png")
+                            plt.savefig(f"{num_flattener_dir}/heatmap_{group_label}.png")
                             plt.close()
                             print(f"SUCCESS: {group_title}...")
                         else:

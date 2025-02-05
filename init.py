@@ -24,22 +24,24 @@ gridspec = {
     "k_bend":   [800], #[800,1000],
     "k_area_f": [100000], #[10000], #[1000, 10000],
     "k_area_i": [100],
+    "TriArea": [0.5],
     "dt":       [0.0005],
     "N_active": [1],
     "num_beads": [9], #[5,7],
     "aspect_rat": [5], #[3,4,5], # rod length in units of recalculated sigma
     "freedom_rat":[3], # [2, 3, 4], # ratio of mesh diam to rod length (decides rod const. particle)
     "v0":       [40],
-    "runtime":  [2e5], #[5e6],
-    "equiltime": [1e5], #[1e5],
+    "runtime":  [5e5], #[5e6],
+    "equiltime": [2e5], #[2e5], #[1e5],
     
     # To flatten (approx cylinders)
-    "num_filler":  [20], #[0,10], #number of filler particles to flatten spherocylinder
-    "filler_diam_ratio": [0.25], # ratio of filler particle diam to A diam 
+    "num_flattener":  [20], #[0,10], #number of flattenr particles to flatten spherocylinder
+    "flattener_sigma_rat": [0.25], # ratio of flattener particle diam to A diam 
+    "mesh_sigma_rat":[0.333], # ratio of mesh particle diam to A diam
 
     # To add gravity
     "gravity_strength": [1.0], # abs value gravity strength
-    "gravity_ratio": [1], # how much strong grav on A beads than mesh
+    "gravity_rat": [1], # how much strong grav on A beads than mesh
     
     # To make chiral:
     "rand_orient":  ['False'],
