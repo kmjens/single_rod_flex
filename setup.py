@@ -189,6 +189,12 @@ def Setup_implementation(job, communicator):
 
     with gsd.hoomd.open(name=job.fn('initial_wRigid.gsd'), mode='w') as f:
         f.append(frame)
+    
+    sim = hoomd.Simulation(device=device)
+    state = sim.create_state_from_gsd(filename=job.fn('initial_wRigid.gsd'))
+
+    snap = sim.state.get_snapshot()
+    print('after initial gsd:', snap.particles.diameter)
 
     #############################################
     ## Set up filters and integrator
@@ -367,22 +373,25 @@ def Setup_implementation(job, communicator):
     active.active_torque['A'] = (0,0,0)
     integrator.forces.append(active)
 
-    sim.run(10000)
+    sim.run(9999)
+    
+    final_timestep = sim.timestep+1
+    final_frame_writer = hoomd.write.GSD(trigger=hoomd.trigger.On(final_timestep),
+                                        filename=job.fn("final_init_frame.gsd"),
+                                        logger=logger, mode='wb',
+                                        dynamic=['momentum','property','attribute/particles/diameter'],
+                                        filter=filter_all)
+
+    final_frame_writer.write_diameter = True
+    sim.operations += final_frame_writer
+    
+    sim.run(1)
     gsd_oper.flush()
     print('step: ', sim.timestep)
 
     print('\nCurrent state:')
     print_state(sigma, mesh_sigma, filler_sigma, num_filler, N_active, num_beads, bead_spacing, N_mesh, R, SP.aspect_rat, SP.freedom_rat, deltas, SP.gravity_strength, SP.torque_mag, job)
 
-    final_timestep = sim.timestep
-    final_frame_writer = hoomd.write.GSD(trigger=hoomd.trigger.On(final_timestep),
-                                        filename="FinalInitFrame.gsd",
-                                        logger=logger, mode='wb',
-                                        dynamic=['momentum','property','attribute/particles/diameter'],
-                                        filter=filter_all)
-
-    sim.operations += final_frame_writer
-    sim.run(0)
     
     os.rename(job.fn('Setup.out.in_progress'), job.fn('Setup.out'))
 
