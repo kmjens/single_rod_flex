@@ -11,6 +11,101 @@ import seaborn as sns
 from itertools import combinations
 from collections import defaultdict
 
+# Currently not in use:
+
+class JobParser:
+    '''
+    Collect variables defined in init.py.
+    Store experimental values.
+    Calculation sim to exp conversion factors.
+    Perform a few basic calculations on statepoints.
+    '''
+    def __init__(self, job):
+
+        self.kT      = job.cached_statepoint['kT']
+        self.R       = job.cached_statepoint['R']
+        self.N_mesh  = int(job.cached_statepoint['N_mesh'])
+        self.dt      = job.cached_statepoint['dt']
+        self.v0      = job.cached_statepoint['v0']
+        self.simseed = job.cached_statepoint['seed']
+        self.runtime     = job.cached_statepoint['runtime']
+        self.equiltime   = job.cached_statepoint['equiltime']
+
+        self.k_bend   = job.cached_statepoint['k_bend']
+        self.k_bond   = 4 * self.k_bend # based on general ratio lipid bilayers have
+        self.k_area_f = job.cached_statepoint['k_area_f']
+        self.k_area_i = job.cached_statepoint['k_area_i']
+        self.TriArea  = job.cached_statepoint['TriArea']
+
+        # Particle and mesh size scaling:
+        self.aspect_rat      = job.cached_statepoint['aspect_rat'] # aspect ratio of rod length to diam
+        self.freedom_rat     = job.cached_statepoint['freedom_rat'] # ratio of flex diam to rod length
+        self.filler_diam_rat = job.cached_statepoint['filler_diam_rat']
+
+        # Adding gravity and torque:
+        self.gravity_strength  = np.abs(job.cached_statepoint['gravity_strength'])
+        self.gravity_rat   = np.abs(job.cached_statepoint['gravity_rat'])
+
+        self.rand_orient     = job.cached_statepoint['rand_orient']
+        self.active_angle    = job.cached_statepoint['active_angle']
+        self.torque_mag      = job.cached_statepoint['torque_mag']
+
+
+class BuoyancyAndGravity:
+    ''':
+    Store experimental values and conversion factors.
+    Calculation sim to exp conversion factors.
+    Perform a few basic calculations on statepoints.
+    '''
+    def __init__(self, R, N_mesh):
+        #############################################
+        ## Real units:
+        #############################################
+        
+        # Conversion Factors
+        self.mass_conv = 7.863e-14       # kg per 1 sim units (ie approx mass of one rod)
+        self.len_conv = 3e-6             # m per 1 sim units (ie 3um, approx rod width)
+        self.energy_conv = 2.0709735e-20 # J per 1 sim units (ie 5kT)
+        self.time_conv = self.len_conv * self.mass_conv**(1/2) / (self.energy_conv**(1/2))           # sec per 1 sim units
+        print(self.time_conv)
+
+        # Experimental values
+        self.rho_rod = 1.12              # kg/m^3
+        self.rho_outer_fluid = 1.014     # kg/m^3
+        self.rho_inner_fluid = 1.025     # kg/m^3
+        self.rho_mesh_V = 0.88           # kg/m^3
+        self.mesh_thickness = 6.31e-9    # m
+        self.mesh_area_density = self.rho_mesh_V * self.mesh_thickness # kg/m^2
+
+        # convert params to sim units
+        self.g = 9.8 * (self.time_conv)**2 / self.len_conv
+
+        self.rho_rod *= self.len_conv**3 / self.mass_conv
+        self.rho_outer_fluid *= self.len_conv**3 / self.mass_conv
+        self.rho_inner_fluid *= self.len_conv**3 / self.mass_conv
+
+        self.V_rod = 10 * np.pi * (1 / 2)**2 * (10/3)    # sim units
+        self.mass_rod = self.V_rod * self.rho_rod        # sim units
+
+        self.SA_flex = 4 * np.pi * R**2
+        self.V_flex = (4 / 3) * np.pi * R**3
+        self.mesh_area_density *= self.len_conv**2 / self.mass_conv
+        self.mesh_mass = self.mesh_area_density * self.SA_flex
+        self.flex_mass = self.mesh_mass + self.rho_inner_fluid * self.V_flex
+
+        #self.rho_mesh_and_fluid = ((self.rho_inner_fluid * self.V_flex) + self.mesh_mass) / self.V_flex# rho considering mass of mesh and mass of fluid
+
+        # Buoyant force and gravitational force
+        self.F_grav_mesh = self.g * self.flex_mass / N_mesh
+        self.F_grav_rod = self.g * self.mass_rod
+        self.F_boy_mesh = self.g * self.rho_outer_fluid * self.V_flex / N_mesh
+        self.F_boy_rod = self.g * self.rho_inner_fluid * self.V_rod
+        self.F_const_mesh = self.F_boy_mesh - self.F_grav_mesh
+        self.F_const_rod = self.F_boy_rod - self.F_grav_rod
+        print('F_grav_mesh: ', self.F_grav_mesh, ' F_grav_rod: ', self.F_grav_rod)
+        print('F_boy_mesh: ', self.F_boy_mesh, ' F_boy_rod: ', self.F_boy_rod)
+        print('F_const_mesh: ', self.F_const_mesh, ' F_const_rod: ', self.F_const_rod)
+
 
 def get_tether_params(frame, triangle_tags):
     triangle_cartesian_positions = frame.particles.position[triangle_tags]
