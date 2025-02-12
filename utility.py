@@ -40,13 +40,10 @@ class JobParser:
         # Particle and mesh size scaling:
         self.aspect_rat      = job.cached_statepoint['aspect_rat'] # aspect ratio of rod length to diam
         self.freedom_rat     = job.cached_statepoint['freedom_rat'] # ratio of flex diam to rod length
-        self.flattener_sigma_rat = job.cached_statepoint['flattener_diam_rat']
-        self.mesh_sigma_rat = job.cached_statepoint['mesh_sigma_diam_rat']
+        self.flattener_sigma_rat = job.cached_statepoint['flattener_sigma_rat']
+        self.mesh_sigma_rat = job.cached_statepoint['mesh_sigma_rat']
 
-        # Adding gravity and torque:
-        self.gravity_strength  = np.abs(job.cached_statepoint['gravity_strength'])
-        self.gravity_rat   = np.abs(job.cached_statepoint['gravity_rat'])
-
+        # Optionally adding torque:
         self.rand_orient     = job.cached_statepoint['rand_orient']
         self.active_angle    = job.cached_statepoint['active_angle']
         self.torque_mag      = job.cached_statepoint['torque_mag']
@@ -58,7 +55,7 @@ class BuoyancyAndGravity:
     Calculation sim to exp conversion factors.
     Perform a few basic calculations on statepoints.
     '''
-    def __init__(self, R, N_mesh):
+    def __init__(self, R, N_mesh, cylinder_vol):
         #############################################
         ## Real units:
         #############################################
@@ -85,8 +82,7 @@ class BuoyancyAndGravity:
         self.rho_outer_fluid *= self.len_conv**3 / self.mass_conv
         self.rho_inner_fluid *= self.len_conv**3 / self.mass_conv
 
-        self.V_rod = 10 * np.pi * (1 / 2)**2 * (10/3)    # sim units
-        self.mass_rod = self.V_rod * self.rho_rod        # sim units
+        self.mass_rod = cylinder_vol * self.rho_rod        # sim units
 
         self.SA_flex = 4 * np.pi * R**2
         self.V_flex = (4 / 3) * np.pi * R**3
@@ -100,7 +96,7 @@ class BuoyancyAndGravity:
         self.F_grav_mesh = self.g * self.flex_mass / N_mesh
         self.F_grav_rod = self.g * self.mass_rod
         self.F_boy_mesh = self.g * self.rho_outer_fluid * self.V_flex / N_mesh
-        self.F_boy_rod = self.g * self.rho_inner_fluid * self.V_rod
+        self.F_boy_rod = self.g * self.rho_inner_fluid * cylinder_vol
         self.F_const_mesh = self.F_boy_mesh - self.F_grav_mesh
         self.F_const_rod = self.F_boy_rod - self.F_grav_rod
         print('F_grav_mesh: ', self.F_grav_mesh, ' F_grav_rod: ', self.F_grav_rod)
@@ -122,70 +118,98 @@ def get_tether_params(frame, triangle_tags):
 
     return(l_min, l_c1, l_c0, l_max)
 
-def print_state(sigma, mesh_sigma, flattener_sigma, num_flattener, N_active, num_beads, bead_spacing, N_mesh, R, aspect_rat, freedom_rat, deltas, gravity_strength, torque_mag, job):
+def print_state(sigma, mesh_sigma, flattener_sigma, N_particles,  num_flattener, N_active, num_beads, bead_spacing, N_mesh, R, aspect_rat, freedom_rat, deltas, torque_mag, mass_mesh_bead, mass_rod, F_const_rod, F_const_mesh, job):
     print('sigma: ', sigma)
     print('mesh_sigma: ', mesh_sigma)
     print('flattener_sigma: ', flattener_sigma)
-    print('\nnum_flattener: ', num_flattener)
+
+    print('\n')
+    print('N_particles: ', N_particles)
+    print('num_flattener: ', num_flattener)
     print('N_active: ', N_active)
     print('num_beads: ', num_beads)
     print('bead_spacing:', bead_spacing)
     print('N_mesh: ', N_mesh)
     print('mesh R: ', R)
+    
+    print('\n')
     print('aspect_rat: ', aspect_rat)
     print('freedom_rat: ', freedom_rat)
-    print('\ndeltas:')
+    
+    print('\n')
+    print('mass_mesh_bead: ',mass_mesh_bead)
+    print('mass_rod: ',mass_rod)
+    print('F_const_rod: ',F_const_rod)
+    print('F_const_mesh: ',F_const_mesh)
+
+    print('\n')
+    print('deltas:')
     print('AA: ', deltas[0][0], '\nAm: ', deltas[0][1], '\nAf: ', deltas[0][2], '\nfm: ',deltas[1][2], '\nff: ', deltas[2][2],'\nmm: ', deltas[1][1])
-    if gravity_strength == 0:
-        print('\ngravity off')
-    else:
-        print('\ngravity_strength: ', gravity_strength)
+    
     if torque_mag == 0:
         print('torque off')
     else:
-        print('gravity_strength: ', gravity_strength)
+        print('torque_mag: ', torque_mag)
     
     state_log_file = job.fn('state.log')
     with open(state_log_file, "w") as f:
         print('job: ', job, file=f)
         print('statepoints: ', job.sp, '\n\n', file=f)
+        print('N_particles: ', N_particles, file=f)
         print('sigma: ', sigma, file=f)
         print('mesh_sigma: ', mesh_sigma, file=f)
         print('flattener_sigma: ', flattener_sigma, file=f)
         print('num_flattener: ', num_flattener, file=f)
         print('N_active: ', N_active, file=f)
-        print('num_beads: ', num_beads)
-        print('bead_spacing:', bead_spacing)
-        print('N_mesh: ', N_mesh)
-        print('mesh R: ', R)
-        print('aspect_rat: ', aspect_rat)
-        print('freedom_rat: ', freedom_rat)
+        print('num_beads: ', num_beads, file=f)
+        print('bead_spacing:', bead_spacing, file=f)
+        print('N_mesh: ', N_mesh, file=f)
+        print('mesh R: ', R, file=f)
+        print('aspect_rat: ', aspect_rat,file=f)
+        print('freedom_rat: ', freedom_rat,file=f)
+
+        print('\n',file=f)
+        print('mass_mesh_bead: ',mass_mesh_bead,file=f)
+        print('mass_rod: ',mass_rod,file=f)
+        print('F_const_rod: ',F_const_rod,file=f)
+        print('F_const_mesh: ',F_const_mesh,file=f)
+
         print('deltas:', file=f)
         print('AA: ', deltas[0][0], ' Am: ', deltas[0][1], ' Af: ', deltas[0][2], 
               ' fm: ', deltas[1][2], ' ff: ', deltas[2][2], ' mm: ', deltas[1][1], file=f)
-        if gravity_strength == 0:
-            print('gravity off', file=f)
-        else:
-            print('gravity_strength: ', gravity_strength, file=f)
         if torque_mag == 0:
             print('torque off', file=f)
         else:
-            print('gravity_strength: ', gravity_strength, file=f)
-    
-def get_bead_pos(bead_spacing, sigma, num_const_beads):
-    '''
-    get bead positions for given bead_spacing in active particle rigid body
-    positions are relative to rigid body frame.
-    '''
-    
-    x_coords = []
-    for i in list(range(int(num_const_beads/2))):
-        x_coords.append(((bead_spacing) / (num_const_beads-2)) * (i + 1))
-        x_coords.append((-1) * ((bead_spacing) / (num_const_beads-2)) * (i + 1))
-    x_coords = list(np.sort(x_coords))
+            print('torque_mag: ', torque_mag)
 
+def get_bead_pos(rod_length, sigma, num_const_beads):
+    """
+    Place beads symmetrically around the origin (0, 0, 0).
+    If `num_const_beads` is odd, include an additional bead at the end.
+    """
+    x_end = (rod_length - sigma) /2
+    x_start = - x_end
+
+    x_coords = []
+    num_total_beads = num_const_beads
+    half_beads = num_total_beads // 2
+
+    spacing = (x_end - x_start) / (num_const_beads - 1)
+
+    for i in range(half_beads):
+        x_coords.append(x_start + i * spacing)
+        x_coords.append(x_end - i * spacing)
+
+    x_coords = list(sorted(set(x_coords)))
+
+    # Insert zero bead and remove if needed
+    x_coords.insert(len(x_coords) // 2, 0)
     bead_pos_list = [(x, 0, 0) for x in x_coords]
+    if (0, 0, 0) in bead_pos_list:
+        bead_pos_list.remove((0, 0, 0))
+
     return bead_pos_list
+
 
 def get_flattener_pos(num_flattener,sigma,flattener_sigma,rod_length):
     '''
@@ -205,12 +229,12 @@ def get_flattener_pos(num_flattener,sigma,flattener_sigma,rod_length):
         a = sigma/2 - flattener_sigma/2 # radius of circle to rotate flattener points on (// to xy-plane)
 
         theta = np.linspace(0, 2 * np.pi, num_flattener)
-        #flattener_pos = [[x,round(a*np.sin(i),10),round(a*np.cos(i),10)] for i in theta]
         neg_flattener_pos = [[-x,round(a*np.sin(i),10),round(a*np.cos(i),10)] for i in theta]
         pos_flattener_pos = [[x,round(a*np.sin(i),10),round(a*np.cos(i),10)] for i in theta]
         flattener_pos = neg_flattener_pos + pos_flattener_pos
 
     return flattener_pos
+
 
 
 def fibonacci_sphere(num_pts, R):
@@ -391,109 +415,3 @@ def find_mesh_radius_avg_and_std(sim):
     return AVGrad, STDrad
 
 
-class PlottingFxns:
-    def __init__(self):
-        self.project = None
-        self.key_of_interest = []
-        self.data_values = ["MSD_correlation"]
-        self.df = None
-
-
-    def aggregate_results(self):
-        print("Aggregating results...")
-        all_results = []
-
-        self.project = signac.get_project()
-        for job in self.project:
-            try:
-                with open(job.fn('analysis_data.json'), 'r') as f:
-                    data = json.load(f)
-                    all_results.append(data)
-            except FileNotFoundError:
-                print(f"Missing analysis_data.json for job: {job.id}")
-
-        self.df = pd.DataFrame(all_results)
-        self.df.to_csv("aggregated_results.csv", index=False)
-
-
-    def collect_values(self):
-        print('Collecting statepoint values...')
-
-        statepoint_values = defaultdict(set)
-        for job in self.project:
-            for key, value in job.sp.items():
-                if key != "seed":
-                    statepoint_values[key].add(value)
-
-        # Determine keys of interest (those with multiple values)
-        self.keys_of_interest = [key for key, values in statepoint_values.items() if len(values) > 1]
-
-        assert all(key in self.df.columns for key in self.keys_of_interest), "Some keys are missing in the DataFrame."
-        assert all(data_value in self.df.columns for data_value in self.data_values), "Data value column is missing in the DataFrame."
-
-    def plot_heatmaps(self):
-        print('Begin plotting heatmaps...')
-
-        # Make directories as needed
-        os.makedirs('plots/heatmaps', exist_ok=True)
-        for data_value in self.data_values:
-            os.makedirs(f"plots/heatmaps/{data_value}", exist_ok=True)
-            for i, y_key in enumerate(self.keys_of_interest):
-                for x_key in self.keys_of_interest[i + 1:]:
-                    os.makedirs(f"plots/heatmaps/{data_value}/{x_key}_V_{y_key}", exist_ok=True)
-        
-        # Plot for every key of interest for every combo of other keys
-        for i, y_key in enumerate(self.keys_of_interest):
-            for x_key in self.keys_of_interest[i + 1:]:
-
-                print('Producing heat maps for: ', x_key,' VS ',y_key,'...')
-                other_keys = [key for key in self.keys_of_interest if key not in (y_key, x_key)]
-                grouped = self.df.groupby(other_keys)
-
-                for group_values, group_df in grouped:
-                    group_dict = dict(zip(other_keys, group_values))
-
-                    num_flattener = group_dict.pop('num_flattener', None)
-                    group_title = ", ".join([f"{key}={value}" for key, value in group_dict.items()])
-                    group_label = "_".join([f"{key}={value}" for key, value in group_dict.items()])
-
-
-                    for data_value in self.data_values:
-                        if num_flattener is not None:
-                            num_flattener_dir = f"final_heatmaps/{data_value}/{x_key}_V_{y_key}/num_flattener_{num_flattener}"
-                            if not os.path.exists(num_flattener_dir):
-                                os.makedirs(num_flattener_dir)
-                        else:
-                            num_flattener_dir = f"final_heatmaps/{data_value}/{x_key}_V_{y_key}"
-                            if not os.path.exists(num_flattener_dir):
-                                os.makedirs(num_flattener_dir)
-
-                        pivot_table = group_df.pivot_table(index=y_key, columns=x_key, values=data_value)
-                        if not pivot_table.empty:
-                            plt.figure(figsize=(10, 8))
-                            sns.heatmap(pivot_table, annot=True, fmt=".2f",
-                                        cmap="viridis", cbar_kws={'label': data_value},
-                                        vmin=-1, vmax=1)
-                            plt.title(f"{data_value} as a function of {x_key} and {y_key}\n({group_title})")
-                            plt.xlabel(x_key)
-                            plt.ylabel(y_key)
-                            plt.savefig(f"{num_flattener_dir}/heatmap_{group_label}.png")
-                            plt.close()
-                            print(f"SUCCESS: {group_title}...")
-                        else:
-                            print(f"NAN For: {group_title}...")
-
-                print('\n')
-        print('Heatmap plotting function completed.')
-
-
-    def plot_lines(self):
-        print('Begin plotting line plots...')
-        
-        # Make directories as needed
-        os.makedirs('plots/linear', exist_ok=True)
-        for data_value in self.data_values:
-            os.makedirs(f"plots/linear/{data_value}", exist_ok=True)
-            for i, y_key in enumerate(self.keys_of_interest):
-                for x_key in self.keys_of_interest[i + 1:]:
-                    os.makedirs(f"plots/linear/{data_value}/{x_key}_V_{y_key}", exist_ok=True)

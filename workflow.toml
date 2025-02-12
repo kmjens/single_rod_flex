@@ -9,16 +9,27 @@ account='dmr140129'
 partition = "shared"
                                                                                             
 [[action]]
+name = "Setup"
+launchers =["mpi"]
+products = ['Setup.out']
+resources.walltime.per_submission = "02:00:00"
+resources.processes.per_directory = 1
+group.maximum_size=1
+command = "python setup.py --action $ACTION_NAME {directories}"
+
+[[action]]
 name = "Run"
+previous_actions = ["Setup"]
 launchers =["mpi"]
 products = ['Run.out']
-resources.walltime.per_submission = "00:10:00"
+resources.walltime.per_submission = "01:00:00"
 resources.processes.per_directory = 1
 group.maximum_size=1
 command = "python project.py --action $ACTION_NAME {directories}"
 
 [[action]]
 name = "Analysis"
+previous_actions = ["Setup"]
 launchers =["mpi"]
 #products = ['analysis_data.json']
 resources.walltime.per_submission = "01:00:00"

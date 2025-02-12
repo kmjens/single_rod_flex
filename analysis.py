@@ -19,7 +19,8 @@ def Analysis_implementation(job, communicator):
     ## Collect positions
     #############################################
    
-    f = gsd.pygsd.GSDFile(open(job.fn('active.gsd'), 'rb'))
+    #f = gsd.pygsd.GSDFile(open(job.fn('active.gsd'), 'rb'))
+    f = gsd.pygsd.GSDFile(open(job.fn('Setup.gsd'), 'rb'))
     traj = gsd.hoomd.HOOMDTrajectory(f)
     
     time_indices = np.arange(len(traj))
@@ -211,6 +212,9 @@ def Analysis_implementation(job, communicator):
     }
     all_data.update(analysis_data)
     with open(job.fn('analysis_data.json'), 'w') as f:
+        json.dump(all_data, f, indent=4)
+
+    with open(job.fn('signac_job_document.json'), 'w') as f:
         json.dump(all_data, f, indent=4)
 
     print('Analysis complete.')

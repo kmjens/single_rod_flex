@@ -42,6 +42,8 @@ def Run_implementation(job, communicator):
     rod_length   = SP.aspect_rat * sigma
     bead_spacing = (rod_length / 2) - (sigma / 2)
     sphero_vol   = (sigma ** 3) * (3 * rod_length - 1) / 4 # approx as spherocylinder
+    cylinder_vol = 2 * np.pi**2 * (sigma / 2)**3
+    vol_diff     = cylinder_vol - sphero_vol
     R            = (SP.freedom_rat * rod_length) / 2
     L            = R * 5 # box size
 
@@ -49,6 +51,7 @@ def Run_implementation(job, communicator):
     TriArea = SP.TriArea
     num_tri = int(4 * np.pi * R**2 / TriArea)
     N_mesh = num_tri + 2
+
 
     #N_mesh      = int(np.ceil(4 * np.pi * R**2 * 0.8))
     N_active    = int(job.cached_statepoint['N_active'])
@@ -60,9 +63,11 @@ def Run_implementation(job, communicator):
     N_particles = N_mesh + N_active + N_bead + N_flattener
 
     # Buoyant force and gravitational force
-    BG = BuoyancyAndGravity(R, N_mesh)
-    F_const_mesh = BG.F_const_mesh
-    F_const_rod = BG.F_const_rod
+    BG = BuoyancyAndGravity(R, N_mesh, cylinder_vol)
+    F_const_mesh    = BG.F_const_mesh
+    F_const_rod     = BG.F_const_rod
+    mass_rod        = BG.mass_rod
+    mass_mesh_bead  = BG.mesh_mass / N_mesh
 
     with open(job.fn('Run.out.in_progress'), 'w') as file:
         file.write('Initializing sim seed: ' + str(SP.simseed) + '\n')

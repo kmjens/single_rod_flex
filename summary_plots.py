@@ -11,7 +11,7 @@ import seaborn as sns
 from itertools import combinations
 from collections import defaultdict
 
-from utility import PlottingFxns
+from figs_utility import PlottingFxns
 
 PLOT_HEATMAPS = False
 PLOT_LINES = False
