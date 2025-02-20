@@ -34,33 +34,34 @@ def Setup_implementation(job, communicator):
     flattener_sigma = SP.flattener_sigma_rat * sigma
     
     # Calculate gammas
-    gamma   = job.cached_statepoint['gamma']
-    gamma_r = [gamma/3.0,gamma/3.0,gamma/3.0]
-    mesh_gamma  = 5
+    visc    = job.cached_statepoint['visc']
+    gamma   = 6 * np.pi * sigma
+    gamma_r = [gamma/3.0, gamma/3.0, gamma/3.0]
 
-    # Calculate particle and mesh scaling:
-    rod_length   = SP.aspect_rat * sigma
-    bead_spacing = (aspect_rat - 1) / (num_const_beads - 1)
-    sphero_vol   = (sigma ** 3) * (3 * rod_length - 1) / 4 # approx as spherocylinder
-    cylinder_vol = rod_length * np.pi * (sigma / 2) ** 2
-    vol_diff     = cylinder_vol - sphero_vol
-    R            = (SP.freedom_rat * rod_length) / 2
-    L            = R * 5 # box size
-
-    # Calculate particle numbers:
-    TriArea = SP.TriArea
-    num_tri = int(4 * np.pi * R**2 / TriArea)
-    N_mesh = num_tri + 2
+    mesh_gamma  = 6 * np.pi * mesh_sigma
+    mesh_gamma_r = [mesh_gamma/3.0, mesh_gamma/3.0, mesh_gamma/3.0]
     
-    #N_mesh      = int(np.ceil(4 * np.pi * R**2 * 0.8))
+    # Particle num and mesh scaling
     N_active    = int(job.cached_statepoint['N_active'])
     num_flattener  = job.cached_statepoint['num_flattener'] # num on one active particle
     N_flattener    = 2 * num_flattener * N_active # including all active particles
     num_beads   = int(job.cached_statepoint['num_beads']) #number of beads including the center particle in rigid body
     num_const_beads = int(num_beads - 1) # neglecting middle particle
     N_bead      = num_const_beads * N_active
-    N_particles = N_mesh + N_active + N_bead + N_flattener
+    
+    rod_length   = SP.aspect_rat * sigma
+    bead_spacing = (SP.aspect_rat - 1) / (num_const_beads - 1)
+    sphero_vol   = (sigma ** 3) * (3 * rod_length - 1) / 4 # approx as spherocylinder
+    cylinder_vol = rod_length * np.pi * (sigma / 2) ** 2
+    vol_diff     = cylinder_vol - sphero_vol
+    R            = (SP.freedom_rat * rod_length) / 2
+    L            = R * 5 # box size
 
+    TriArea = SP.TriArea
+    num_tri = int(4 * np.pi * R**2 / TriArea)
+    N_mesh  = num_tri + 2
+    N_particles = N_mesh + N_active + N_bead + N_flattener
+    
     # Buoyant force and gravitational force
     BG = BuoyancyAndGravity(R, N_mesh, cylinder_vol)
     F_const_mesh    = BG.F_const_mesh
@@ -95,7 +96,6 @@ def Setup_implementation(job, communicator):
     mesh_typeid = [0] * N_mesh
     mesh_diam = [mesh_sigma] * N_mesh
     mesh_MoI = np.zeros((N_mesh,3),dtype=float)
-    #mesh_mass = [1] * N_mesh
     mesh_mass = [mass_mesh_bead] * N_mesh
 
     mesh = pv.PolyData(mesh_position)
@@ -116,8 +116,7 @@ def Setup_implementation(job, communicator):
     A_orient[:,0] = 1
     A_typeid = np.ones(len(A_position),dtype=int)
     A_diam = [sigma] * N_active
-    #A_mass = [mass_rod] * N_active
-    A_mass = [1] * N_active
+    A_mass = [mass_rod] * N_active
     A_MoI = np.zeros((len(A_position),3),dtype=float) # kg*m2 -- need to check unit convs?
     A_MoI[:,0] = 0
     A_MoI[:,1] = 1.0 / 12 * 5 * (rod_length * sigma)**2
@@ -189,8 +188,6 @@ def Setup_implementation(job, communicator):
 
     mass = np.append(mass, bead_mass, axis=0)
     mass = np.append(mass, flattener_mass, axis=0)
-    print('check diam: ', diameter)
-    print('check mass: ', mass)
     
     # Create initial gsd
     snapshot = sim.state.get_snapshot()
@@ -213,8 +210,8 @@ def Setup_implementation(job, communicator):
     state = sim.create_state_from_gsd(filename=job.fn('initial_wRigid.gsd'))
 
     snap = sim.state.get_snapshot()
-    print('diam after initial gsd:', snap.particles.diameter)
-    print('mass after initial gsd:', snap.particles.mass)
+    #print('diam after initial gsd:', snap.particles.diameter)
+    #print('mass after initial gsd:', snap.particles.mass)
 
     #############################################
     ## Set up filters and integrator
@@ -232,9 +229,14 @@ def Setup_implementation(job, communicator):
 
     langevin = hoomd.md.methods.Langevin(filter=filter_rigid, kT=SP.kT)
     langevin.gamma.default = gamma
-    langevin.gamma_r.default = [gamma,gamma,gamma]
+    langevin.gamma_r.default = gamma_r
     integrator.methods.append(langevin)
-
+    ''' 
+    langevin_mesh = hoomd.md.methods.Langevin(filter=filter_mesh, kT=SP.kT)
+    langevin_mesh.gamma.default = mesh_gamma
+    langevin_mesh.gamma_r.default = mesh_gamma_r
+    integrator.methods.append(langevin_mesh)
+    '''
     #############################################
     ## Add potentials
     #############################################
@@ -298,7 +300,7 @@ def Setup_implementation(job, communicator):
 
     # Helfrich bending potential:
     helfrich_potential = hoomd.md.mesh.bending.Helfrich(mesh_obj)
-    helfrich_potential.params["mesh"] = dict(k=SP.k_bend)
+    helfrich_potential.params["mesh"] = dict(k=(SP.k_bend * SP.kT))
     integrator.forces.append(helfrich_potential)
 
     # Area conservation potential:
@@ -366,7 +368,6 @@ def Setup_implementation(job, communicator):
 
     # Add gravity:
     print('\nAdding gravity...')
-    mass_mesh_particle = 1
     gravity = hoomd.md.force.Constant(filter=hoomd.filter.All())
     gravity.constant_force['A'] = (0,0,F_const_rod)
     gravity.constant_force['A_const','A_flattener'] = (0,0,0)
@@ -379,8 +380,8 @@ def Setup_implementation(job, communicator):
     ## Run the simulation
     #############################################
     print('\nFinish equilibrating simulation...')
-    while sim.timestep < (SP.equiltime - 10000):
-        sim.run(10000)
+    while sim.timestep < (SP.equiltime - 1000):
+        sim.run(1000)
         gsd_oper.flush()
         print('step: ', sim.timestep)
 
@@ -392,7 +393,7 @@ def Setup_implementation(job, communicator):
     active.active_torque['A'] = (0,0,0)
     integrator.forces.append(active)
 
-    sim.run(9999)
+    sim.run(999)
     
     final_timestep = sim.timestep+1
     final_frame_writer = hoomd.write.GSD(trigger=hoomd.trigger.On(final_timestep),
@@ -415,7 +416,14 @@ def Setup_implementation(job, communicator):
     os.rename(job.fn('Setup.out.in_progress'), job.fn('Setup.out'))
 
     print('Initialization complete.')
-    '''
+    gsd_demo = hoomd.write.GSD(trigger=hoomd.trigger.Periodic(int(2000)), #int(2000)
+                               filename=job.fn('Demo.gsd'),
+                               logger=logger, mode='wb',
+                               dynamic=['momentum','property','attribute','attribute/particles/diameter'],
+                               filter=filter_all)
+    gsd_demo.write_diameter = True
+    sim.operations += gsd_demo
+    
     print('Running for demo...')
     while sim.timestep < SP.runtime:
         sim.run(100000)
@@ -423,7 +431,7 @@ def Setup_implementation(job, communicator):
         print('step: ', sim.timestep)
 
     print('Simulation complete.')
-    '''
+
 
 def Setup(*jobs):
     processes_per_directory = os.environ['ACTION_PROCESSES_PER_DIRECTORY']

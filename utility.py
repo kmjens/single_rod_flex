@@ -65,13 +65,13 @@ class BuoyancyAndGravity:
         self.len_conv = 3e-6             # m per 1 sim units (ie 3um, approx rod width)
         self.energy_conv = 2.0709735e-20 # J per 1 sim units (ie 5kT)
         self.time_conv = self.len_conv * self.mass_conv**(1/2) / (self.energy_conv**(1/2))           # sec per 1 sim units
-        print(self.time_conv)
+        print('time unit conversion: ', self.time_conv, 'sec/sim unit')
 
         # Experimental values
-        self.rho_rod = 1.12              # kg/m^3
-        self.rho_outer_fluid = 1.014     # kg/m^3
-        self.rho_inner_fluid = 1.025     # kg/m^3
-        self.rho_mesh_V = 0.88           # kg/m^3
+        self.rho_rod = 1120              # kg/m^3
+        self.rho_outer_fluid = 1014      # kg/m^3
+        self.rho_inner_fluid = 1025      # kg/m^3
+        self.rho_mesh_V = 880            # kg/m^3
         self.mesh_thickness = 6.31e-9    # m
         self.mesh_area_density = self.rho_mesh_V * self.mesh_thickness # kg/m^2
 

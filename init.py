@@ -20,24 +20,24 @@ gridspec = {
     "N_mesh":   [1e3],
     "R":        [8], # Radius of spherical mesh
     "kT":       [0.2], 
-    "gamma":    [50],
-    "k_bend":   [800], #[800,1000],
-    "k_area_f": [100000], #[10000], #[1000, 10000],
+    "visc":     [6.29e-3], #[50],
+    "k_bend":   [10], #[800,1000], # will be multiplied by kT when input
+    "k_area_f": [10000], #[10000], #[1000, 10000],
     "k_area_i": [100],
-    "TriArea": [0.5],
-    "dt":       [0.00001],
-    "N_active": [1],
-    "num_beads": [5,7], #[5,7],
-    "aspect_rat": [3,4,5], #[3,4,5], # rod length in units of recalculated sigma
-    "freedom_rat":[2,3,4], # [2, 3, 4], # ratio of mesh diam to rod length (decides rod const. particle)
-    "v0":       [20,40],
-    "runtime":  [5e5], #[5e6],
-    "equiltime": [2e5], #[2e5], #[1e5],
+    "TriArea":  [0.3],
+    "dt":       [0.0001],
+    "N_active":     [1],
+    "num_beads":    [7], #[5,7],
+    "aspect_rat":   [3], #[3,4,5], #[3,4,5], # rod length in units of recalculated sigma
+    "freedom_rat":  [2], #[2,3,4], # [2, 3, 4], # ratio of mesh diam to rod length (decides rod const. particle)
+    "v0":           [20],
+    "runtime":      [5e6], #[5e6],
+    "equiltime":    [1e6], #[2e5], #[1e5],
     
     # To flatten (approx cylinders)
-    "num_flattener":  [0,20], #[0,10], #number of flattenr particles to flatten spherocylinder
-    "flattener_sigma_rat": [0.25], # ratio of flattener particle diam to A diam 
-    "mesh_sigma_rat":[0.333], # ratio of mesh particle diam to A diam
+    "num_flattener":    [20], #[0,10], #number of flattenr particles to flatten spherocylinder
+    "mesh_sigma_rat":   [0.333], # ratio of mesh particle diam to A diam
+    "flattener_sigma_rat":  [0.25], # ratio of flattener particle diam to A diam 
 
     # To make chiral:
     "rand_orient":  ['False'],
