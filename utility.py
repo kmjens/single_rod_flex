@@ -1,5 +1,108 @@
+import json
+import matplotlib
+import os
+import signac
+
 import numpy as np
 import matplotlib.pyplot as plt
+import pandas as pd
+import seaborn as sns
+
+from itertools import combinations
+from collections import defaultdict
+
+# Currently not in use:
+
+class JobParser:
+    '''
+    Collect variables defined in init.py.
+    Store experimental values.
+    Calculation sim to exp conversion factors.
+    Perform a few basic calculations on statepoints.
+    '''
+    def __init__(self, job):
+
+        self.kT      = job.cached_statepoint['kT']
+        self.R       = job.cached_statepoint['R']
+        self.N_mesh  = int(job.cached_statepoint['N_mesh'])
+        self.dt      = job.cached_statepoint['dt']
+        self.v0      = job.cached_statepoint['v0']
+        self.simseed = job.cached_statepoint['seed']
+        self.runtime     = job.cached_statepoint['runtime']
+        self.equiltime   = job.cached_statepoint['equiltime']
+
+        self.k_bend   = job.cached_statepoint['k_bend']
+        self.k_bond   = 4 * self.k_bend # based on general ratio lipid bilayers have
+        self.k_area_f = job.cached_statepoint['k_area_f']
+        self.k_area_i = job.cached_statepoint['k_area_i']
+        self.TriArea  = job.cached_statepoint['TriArea']
+
+        # Particle and mesh size scaling:
+        self.aspect_rat      = job.cached_statepoint['aspect_rat'] # aspect ratio of rod length to diam
+        self.freedom_rat     = job.cached_statepoint['freedom_rat'] # ratio of flex diam to rod length
+        self.flattener_sigma_rat = job.cached_statepoint['flattener_sigma_rat']
+        self.mesh_sigma_rat = job.cached_statepoint['mesh_sigma_rat']
+
+        # Optionally adding torque:
+        self.rand_orient     = job.cached_statepoint['rand_orient']
+        self.active_angle    = job.cached_statepoint['active_angle']
+        self.torque_mag      = job.cached_statepoint['torque_mag']
+
+
+class BuoyancyAndGravity:
+    ''':
+    Store experimental values and conversion factors.
+    Calculation sim to exp conversion factors.
+    Perform a few basic calculations on statepoints.
+    '''
+    def __init__(self, R, N_mesh, cylinder_vol):
+        #############################################
+        ## Real units:
+        #############################################
+        
+        # Conversion Factors
+        self.mass_conv = 7.863e-14       # kg per 1 sim units (ie approx mass of one rod)
+        self.len_conv = 3e-6             # m per 1 sim units (ie 3um, approx rod width)
+        self.energy_conv = 2.0709735e-20 # J per 1 sim units (ie 5kT)
+        self.time_conv = self.len_conv * self.mass_conv**(1/2) / (self.energy_conv**(1/2))           # sec per 1 sim units
+        print('time unit conversion: ', self.time_conv, 'sec/sim unit')
+
+        # Experimental values
+        self.rho_rod = 1120              # kg/m^3
+        self.rho_outer_fluid = 1014      # kg/m^3
+        self.rho_inner_fluid = 1025      # kg/m^3
+        self.rho_mesh_V = 880            # kg/m^3
+        self.mesh_thickness = 6.31e-9    # m
+        self.mesh_area_density = self.rho_mesh_V * self.mesh_thickness # kg/m^2
+
+        # convert params to sim units
+        self.g = 9.8 * (self.time_conv)**2 / self.len_conv
+
+        self.rho_rod *= self.len_conv**3 / self.mass_conv
+        self.rho_outer_fluid *= self.len_conv**3 / self.mass_conv
+        self.rho_inner_fluid *= self.len_conv**3 / self.mass_conv
+
+        self.mass_rod = cylinder_vol * self.rho_rod        # sim units
+
+        self.SA_flex = 4 * np.pi * R**2
+        self.V_flex = (4 / 3) * np.pi * R**3
+        self.mesh_area_density *= self.len_conv**2 / self.mass_conv
+        self.mesh_mass = self.mesh_area_density * self.SA_flex
+        self.flex_mass = self.mesh_mass + self.rho_inner_fluid * self.V_flex
+
+        #self.rho_mesh_and_fluid = ((self.rho_inner_fluid * self.V_flex) + self.mesh_mass) / self.V_flex# rho considering mass of mesh and mass of fluid
+
+        # Buoyant force and gravitational force
+        self.F_grav_mesh = self.g * self.flex_mass / N_mesh
+        self.F_grav_rod = self.g * self.mass_rod
+        self.F_boy_mesh = self.g * self.rho_outer_fluid * self.V_flex / N_mesh
+        self.F_boy_rod = self.g * self.rho_inner_fluid * cylinder_vol
+        self.F_const_mesh = self.F_boy_mesh - self.F_grav_mesh
+        self.F_const_rod = self.F_boy_rod - self.F_grav_rod
+        print('F_grav_mesh: ', self.F_grav_mesh, ' F_grav_rod: ', self.F_grav_rod)
+        print('F_boy_mesh: ', self.F_boy_mesh, ' F_boy_rod: ', self.F_boy_rod)
+        print('F_const_mesh: ', self.F_const_mesh, ' F_const_rod: ', self.F_const_rod)
+
 
 def get_tether_params(frame, triangle_tags):
     triangle_cartesian_positions = frame.particles.position[triangle_tags]
@@ -15,82 +118,123 @@ def get_tether_params(frame, triangle_tags):
 
     return(l_min, l_c1, l_c0, l_max)
 
-def print_state(sigma, mesh_sigma, filler_sigma, num_filler, N_active, deltas, gravity_strength, torque_mag, job):
+def print_state(sigma, mesh_sigma, flattener_sigma, N_particles,  num_flattener, N_active, num_beads, bead_spacing, N_mesh, R, aspect_rat, freedom_rat, deltas, torque_mag, mass_mesh_bead, mass_rod, F_const_rod, F_const_mesh, job):
     print('sigma: ', sigma)
     print('mesh_sigma: ', mesh_sigma)
-    print('filler_sigma: ', filler_sigma)
-    print('\nnum_filler: ', num_filler)
+    print('flattener_sigma: ', flattener_sigma)
+
+    print('\n')
+    print('N_particles: ', N_particles)
+    print('num_flattener: ', num_flattener)
     print('N_active: ', N_active)
-    print('\ndeltas:')
+    print('num_beads: ', num_beads)
+    print('bead_spacing:', bead_spacing)
+    print('N_mesh: ', N_mesh)
+    print('mesh R: ', R)
+    
+    print('\n')
+    print('aspect_rat: ', aspect_rat)
+    print('freedom_rat: ', freedom_rat)
+    
+    print('\n')
+    print('mass_mesh_bead: ',mass_mesh_bead)
+    print('mass_rod: ',mass_rod)
+    print('F_const_rod: ',F_const_rod)
+    print('F_const_mesh: ',F_const_mesh)
+
+    print('\n')
+    print('deltas:')
     print('AA: ', deltas[0][0], '\nAm: ', deltas[0][1], '\nAf: ', deltas[0][2], '\nfm: ',deltas[1][2], '\nff: ', deltas[2][2],'\nmm: ', deltas[1][1])
-    if gravity_strength == 0:
-        print('\ngravity off')
-    else:
-        print('\ngravity_strength: ', gravity_strength)
+    
     if torque_mag == 0:
         print('torque off')
     else:
-        print('gravity_strength: ', gravity_strength)
+        print('torque_mag: ', torque_mag)
     
     state_log_file = job.fn('state.log')
     with open(state_log_file, "w") as f:
         print('job: ', job, file=f)
         print('statepoints: ', job.sp, '\n\n', file=f)
+        print('N_particles: ', N_particles, file=f)
         print('sigma: ', sigma, file=f)
         print('mesh_sigma: ', mesh_sigma, file=f)
-        print('filler_sigma: ', filler_sigma, file=f)
-        print('num_filler: ', num_filler, file=f)
+        print('flattener_sigma: ', flattener_sigma, file=f)
+        print('num_flattener: ', num_flattener, file=f)
         print('N_active: ', N_active, file=f)
+        print('num_beads: ', num_beads, file=f)
+        print('bead_spacing:', bead_spacing, file=f)
+        print('N_mesh: ', N_mesh, file=f)
+        print('mesh R: ', R, file=f)
+        print('aspect_rat: ', aspect_rat,file=f)
+        print('freedom_rat: ', freedom_rat,file=f)
+
+        print('\n',file=f)
+        print('mass_mesh_bead: ',mass_mesh_bead,file=f)
+        print('mass_rod: ',mass_rod,file=f)
+        print('F_const_rod: ',F_const_rod,file=f)
+        print('F_const_mesh: ',F_const_mesh,file=f)
+
         print('deltas:', file=f)
         print('AA: ', deltas[0][0], ' Am: ', deltas[0][1], ' Af: ', deltas[0][2], 
               ' fm: ', deltas[1][2], ' ff: ', deltas[2][2], ' mm: ', deltas[1][1], file=f)
-        if gravity_strength == 0:
-            print('gravity off', file=f)
-        else:
-            print('gravity_strength: ', gravity_strength, file=f)
         if torque_mag == 0:
             print('torque off', file=f)
         else:
-            print('gravity_strength: ', gravity_strength, file=f)
-    
-def get_bead_pos(rod_size_int, sigma):
-    '''
-    get bead positions for given rod_size_int in active particle rigid body
-    positions are relative to rigid body frame.
-    '''
+            print('torque_mag: ', torque_mag)
 
-    num_beads = (rod_size_int - 1) * 2
+def get_bead_pos(rod_length, sigma, num_const_beads):
+    """
+    Place beads symmetrically around the origin (0, 0, 0).
+    If `num_const_beads` is odd, include an additional bead at the end.
+    """
+    x_end = (rod_length - sigma) /2
+    x_start = - x_end
+
     x_coords = []
-    for i in list(range(int(num_beads/2))):
-        x_coords.append((1/2 + i/2) * sigma)
-        x_coords.append((1/2 + i/2) * -sigma)
-    x_coords = list(np.sort(x_coords))
+    num_total_beads = num_const_beads
+    half_beads = num_total_beads // 2
 
+    spacing = (x_end - x_start) / (num_const_beads - 1)
+
+    for i in range(half_beads):
+        x_coords.append(x_start + i * spacing)
+        x_coords.append(x_end - i * spacing)
+
+    x_coords = list(sorted(set(x_coords)))
+
+    # Insert zero bead and remove if needed
+    x_coords.insert(len(x_coords) // 2, 0)
     bead_pos_list = [(x, 0, 0) for x in x_coords]
+    if (0, 0, 0) in bead_pos_list:
+        bead_pos_list.remove((0, 0, 0))
+
     return bead_pos_list
 
-def get_filler_pos(num_filler,sigma,filler_sigma,rod_size):
+
+def get_flattener_pos(num_flattener,sigma,flattener_sigma,rod_length):
     '''
-    Returns filler_sigma (ie. r_filler*2)
-    Returns the positions of the filler particles that
+    Returns flattener_sigma (ie. r_flattener*2)
+    Returns the positions of the flattener particles that
     flatten the spherocylinder relative to 
     the origin of the rigid body as a list [[x1,y1,z1],[x2,y2,z2],...]
 
-    Takes in number of filler particles and diameter of rod spheros.
-    (warning that this is not generalized for more than 4 constituent particles making up the rod rigid body -- ie only works for rod_size = 3*sigma)
+    Takes in number of flattener particles and diameter of rod spheros.
     '''
-    if num_filler == 0:
+    if num_flattener == 0:
         return []
     else:
-        ref_theta = 2 * np.pi / num_filler
+        ref_theta = 2 * np.pi / num_flattener
 
-        x = rod_size/2 - filler_sigma/2
-        a = sigma/2 - filler_sigma/2 # radius of circle to rotate filler points on (// to xy-plane)
+        x = rod_length/2 - flattener_sigma/2
+        a = sigma/2 - flattener_sigma/2 # radius of circle to rotate flattener points on (// to xy-plane)
 
-        theta = np.linspace(0, 2 * np.pi, num_filler)
-        filler_pos = [[x,round(a*np.sin(i),10),round(a*np.cos(i),10)] for i in theta]
+        theta = np.linspace(0, 2 * np.pi, num_flattener)
+        neg_flattener_pos = [[-x,round(a*np.sin(i),10),round(a*np.cos(i),10)] for i in theta]
+        pos_flattener_pos = [[x,round(a*np.sin(i),10),round(a*np.cos(i),10)] for i in theta]
+        flattener_pos = neg_flattener_pos + pos_flattener_pos
 
-    return filler_pos
+    return flattener_pos
+
 
 
 def fibonacci_sphere(num_pts, R):
@@ -269,3 +413,5 @@ def find_mesh_radius_avg_and_std(sim):
     AVGrad = np.mean(rad)
     STDrad = np.std(rad)
     return AVGrad, STDrad
+
+

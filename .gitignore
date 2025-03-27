@@ -8,3 +8,6 @@ __pycache__
 aggregated_results.csv
 heatmaps/
 heatmaps/*
+.DS_Store
+.ipynb_checkpoints
+.ipynb_checkpoints/*

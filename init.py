@@ -11,29 +11,34 @@ def grid(gridspec):
     for values in itertools.product(*gridspec.values()):
         yield dict(zip(gridspec.keys(), values))
 
+## Baseline units:
+#       1 energy sim unit:  10kT = 24.94 kJ/mol
+#       1 length sim unit:  diameter of experimental rod = 3 um
+#       1 mass sim unit:    mass of 1 rod = 1.11 g/cm^3 * V_rod = 0.0313 g
+
 gridspec = {
     "N_mesh":   [1e3],
     "R":        [8], # Radius of spherical mesh
-    "kT":       [0.2],
-    "gamma":    [50],
-    "k_bend":   [500, 600, 800, 1000],
-    "k_area":   [5000, 10000],
-    "dt":       [0.0005],
-    "N_active": [1],
-    "ratio_len":[1.5, 2, 3, 4], # [2, 3, 4], # ratio of mesh diam to rod length (decides rod const. particle)
-    "v0":       [40],
-    "runtime":  [5e6],
-    "equiltime": [1e5],
-    "rod_size_int": [5], # rod length in units of recalculated sigma
+    "kT":       [0.2], 
+    "visc":     [6.29e-3], #[50],
+    "k_bend":   [10], #[800,1000], # will be multiplied by kT when input
+    "k_area_f": [10000], #[10000], #[1000, 10000],
+    "k_area_i": [100],
+    "TriArea":  [0.3],
+    "dt":       [0.0001],
+    "N_active":     [1],
+    "num_beads":    [7], #[5,7],
+    "aspect_rat":   [3], #[3,4,5], #[3,4,5], # rod length in units of recalculated sigma
+    "freedom_rat":  [2], #[2,3,4], # [2, 3, 4], # ratio of mesh diam to rod length (decides rod const. particle)
+    "v0":           [20],
+    "runtime":      [5e6], #[5e6],
+    "equiltime":    [1e6], #[2e5], #[1e5],
     
     # To flatten (approx cylinders)
-    "num_filler":  [10, 15, 20], #[0,10], #number of filler particles to flatten spherocylinder
-    "filler_diam_ratio": [0.25], # ratio of filler particle diam to A diam 
+    "num_flattener":    [20], #[0,10], #number of flattenr particles to flatten spherocylinder
+    "mesh_sigma_rat":   [0.333], # ratio of mesh particle diam to A diam
+    "flattener_sigma_rat":  [0.25], # ratio of flattener particle diam to A diam 
 
-    # To add gravity
-    "gravity_strength": [0.05, 0.2, 0.3, 0.5], # abs value gravity strength
-    "gravity_ratio": [1, 2, 5], # how much strong grav on A beads than mesh
-    
     # To make chiral:
     "rand_orient":  ['False'],
     "active_angle": [0], #angle in degrees

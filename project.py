@@ -1,6 +1,3 @@
-## Simulate single flexicles with single rod inside
-# Try to flatten spherocylinders to explore phase space accoring to Haichao Wu experiments
-
 ## Boilerplate:
 import argparse
 import datetime
@@ -17,84 +14,87 @@ import numpy as np
 import pandas as pd
 import pyvista as pv
 
-from utility import fibonacci_sphere, get_bead_pos, get_filler_pos, get_tether_params, print_state
+from utility import *
+
 
 def Run_implementation(job, communicator):
-    
+
     #############################################
     ## Statepoints from init file
     #############################################
     print('\nStarting simulation.')
-    print('job: ', job) 
-    print('statepoints:\n', job.sp, '\n\n') 
+    print('job: ', job)
+    print('statepoints:\n', job.sp, '\n\n')
+    
+    SP = JobParser(job)
 
-    kT      = job.cached_statepoint['kT']
-    R       = job.cached_statepoint['R']
-    N_mesh  = int(job.cached_statepoint['N_mesh'])
-    dt      = job.cached_statepoint['dt']
-    v0      = job.cached_statepoint['v0']
-    simseed = job.cached_statepoint['seed']
-    L       = R * 5 # box size
+    # Calculate sigmas
+    sigma        = 1
+    mesh_sigma   = SP.mesh_sigma_rat * sigma
+    flattener_sigma = SP.flattener_sigma_rat * sigma
+
+    # Calculate gammas
     gamma   = job.cached_statepoint['gamma']
     gamma_r = [gamma/3.0,gamma/3.0,gamma/3.0]
     mesh_gamma  = 5
-    runtime     = job.cached_statepoint['runtime']
-    equiltime   = job.cached_statepoint['equiltime']
-    
-    k_bend   = job.cached_statepoint['k_bend']
-    k_bond   = 4 * k_bend # based on general ratio lipid bilayers have
-    k_area_f = job.cached_statepoint['k_area']
-    k_area   = 0
-    
-    # Adding active particles:
+
+    # Calculate particle and mesh scaling:
+    rod_length   = SP.aspect_rat * sigma
+    bead_spacing = (rod_length / 2) - (sigma / 2)
+    sphero_vol   = (sigma ** 3) * (3 * rod_length - 1) / 4 # approx as spherocylinder
+    cylinder_vol = 2 * np.pi**2 * (sigma / 2)**3
+    vol_diff     = cylinder_vol - sphero_vol
+    R            = (SP.freedom_rat * rod_length) / 2
+    L            = R * 5 # box size
+
+    # Calculate particle numbers:
+    TriArea = SP.TriArea
+    num_tri = int(4 * np.pi * R**2 / TriArea)
+    N_mesh = num_tri + 2
+
+
+    #N_mesh      = int(np.ceil(4 * np.pi * R**2 * 0.8))
     N_active    = int(job.cached_statepoint['N_active'])
-    ratio_len   = job.cached_statepoint['ratio_len'] # defines sigma
-    num_filler  = job.cached_statepoint['num_filler']
-    filler_diam_ratio = job.cached_statepoint['filler_diam_ratio']
-    gravity_strength  = np.abs(job.cached_statepoint['gravity_strength'])
-    gravity_ratio = np.abs(job.cached_statepoint['gravity_ratio'])
-    N_particles = N_mesh + N_active
-    
-    rod_size_int = int(job.cached_statepoint['rod_size_int'])
-    
-    mesh_sigma   = 1
-    sigma        = (2/rod_size_int) * R / ratio_len
-    rod_size     = sigma * rod_size_int
-    filler_sigma = filler_diam_ratio * sigma
-    sphero_vol   = sigma**3 * (3 * rod_size - 1) / 4
-    ideal_buffer = 0.5
+    num_flattener  = job.cached_statepoint['num_flattener'] # num on one active particle
+    N_flattener    = 2 * num_flattener * N_active # including all active particles
+    num_beads   = int(job.cached_statepoint['num_beads']) #number of beads including the center particle in rigid body
+    num_const_beads = int(num_beads - 1) # neglecting middle particle
+    N_bead      = num_const_beads * N_active
+    N_particles = N_mesh + N_active + N_bead + N_flattener
 
-    # Adding torque:
-    rand_orient     = job.cached_statepoint['rand_orient']
-    active_angle    = job.cached_statepoint['active_angle']
-    torque_mag      = job.cached_statepoint['torque_mag']
-    
+    # Buoyant force and gravitational force
+    BG = BuoyancyAndGravity(R, N_mesh, cylinder_vol)
+    F_const_mesh    = BG.F_const_mesh
+    F_const_rod     = BG.F_const_rod
+    mass_rod        = BG.mass_rod
+    mass_mesh_bead  = BG.mesh_mass / N_mesh
+
     with open(job.fn('Run.out.in_progress'), 'w') as file:
-        file.write('Initializing sim seed: ' + str(simseed) + '\n')
-
+        file.write('Initializing sim seed: ' + str(SP.simseed) + '\n')
+    
 
     #############################################
     ## Set up simulation object
     #############################################
-    
+
     device = hoomd.device.CPU(num_cpu_threads=communicator.num_ranks)
     sim = hoomd.Simulation(device=device)
-    sim.seed = simseed
+    sim.seed = SP.simseed
 
-
+    '''
     #############################################
     ## Particle placement
     #############################################
-    
+
     # Mesh:
     x,y,z = fibonacci_sphere(num_pts=N_mesh, R=R)
     mesh_position = np.column_stack((x,y,z))
     mesh_orient = np.zeros((N_mesh,4),dtype=float)
     mesh_orient[:,0] = 1
     mesh_typeid = [0] * N_mesh
-    mesh_diam = [0.333 * mesh_sigma] * N_mesh
+    mesh_diam = [mesh_sigma] * N_mesh
     mesh_MoI = np.zeros((N_mesh,3),dtype=float)
-    
+
     mesh = pv.PolyData(mesh_position)
     faces = mesh.delaunay_3d().extract_geometry().faces.reshape((-1, 4))
     triangle_points = []
@@ -112,17 +112,17 @@ def Run_implementation(job, communicator):
     A_orient = np.zeros((len(A_position),4),dtype=float)
     A_orient[:,0] = 1
     A_typeid = np.ones(len(A_position),dtype=int)
-    A_diam = np.ones(len(A_position),dtype=int)
+    A_diam = [sigma] * N_active
     A_MoI = np.zeros((len(A_position),3),dtype=float)
     A_MoI[:,0] = 0
-    A_MoI[:,1] = 1.0/12*5*(rod_size*sigma)**2
-    A_MoI[:,2] = 1.0/12*5*(rod_size*sigma)**2
+    A_MoI[:,1] = 1.0 / 12 * 5 * (rod_length * sigma)**2
+    A_MoI[:,2] = 1.0 / 12 * 5 * (rod_length * sigma)**2
 
 
     #############################################
     ## Set up frame
     #############################################
-        
+
     position = np.append(mesh_position,A_position,axis=0)
     orientation = np.append(mesh_orient,A_orient,axis=0)
     typeid = np.append(mesh_typeid,A_typeid,axis=0)
@@ -130,38 +130,42 @@ def Run_implementation(job, communicator):
     moment_inertia = np.append(mesh_MoI,A_MoI,axis=0)
 
     frame = gsd.hoomd.Frame()
-    frame.particles.N = N_particles
-    frame.particles.position = position[0:N_particles]
-    frame.particles.orientation = orientation[0:N_particles]
-    frame.particles.typeid = typeid[0:N_particles]
-    frame.particles.diameter = diameter[0:N_particles]
-    frame.particles.moment_inertia = moment_inertia[0:N_particles]
+    frame.particles.N = N_mesh + N_active
+    frame.particles.position = position[0:frame.particles.N]
+    frame.particles.orientation = orientation[0:frame.particles.N]
+    frame.particles.typeid = typeid[0:frame.particles.N]
+    frame.particles.diameter = diameter[0:frame.particles.N]
+    frame.particles.moment_inertia = moment_inertia[0:frame.particles.N]
     frame.configuration.box = [L, L, L, 0, 0, 0]
-    frame.particles.types = ['mesh','A','A_const','A_filler']    
-    
+    frame.particles.types = ['mesh','A','A_const','A_flattener']
+
     with gsd.hoomd.open(name=job.fn('initial.gsd'), mode='w') as f:
        f.append(frame)
+    '''
     
-    state = sim.create_state_from_gsd(filename=job.fn('initial.gsd'))
+
+
+    state = sim.create_state_from_gsd(filename=job.fn('Initialized.gsd'))
     f = gsd.hoomd.open(name=job.fn('initial.gsd'),mode='r')
     frame = f[0]
 
 
-    #############################################    
+    #############################################
     # Construct rod rigid bodies
-    #############################################    
-    
-    bead_type_list = ['A_const'] * ((rod_size_int - 1) * 2)
-    bead_pos_list = get_bead_pos(rod_size_int, sigma) 
-    bead_orient_list = [(1,0,0,0)] * ((rod_size_int - 1) * 2)
-    
-    filler_type_list = ['A_filler'] * num_filler
-    filler_pos_list = get_filler_pos(num_filler, sigma, filler_sigma, rod_size)
-    filler_orient_list = [(1,0,0,0)] * num_filler
+    #############################################
+    bead_type_list = ['A_const'] * N_bead
+    bead_pos_list = get_bead_pos(bead_spacing, sigma, num_const_beads)
+    bead_orient_list = [(1,0,0,0)] * N_bead
+    bead_diam = [sigma] * N_bead
 
-    const_type_list = bead_type_list + filler_type_list
-    const_pos_list = bead_pos_list + filler_pos_list
-    const_orient_list = bead_orient_list +filler_orient_list
+    flattener_type_list = ['A_flattener'] * (2 * num_flattener)
+    flattener_pos_list = get_flattener_pos(num_flattener, sigma, flattener_sigma, rod_length)
+    flattener_orient_list = [(1,0,0,0)] * (2 * num_flattener)
+    flattener_diam = [flattener_sigma] * N_flattener
+
+    const_type_list = bead_type_list + flattener_type_list
+    const_pos_list = bead_pos_list + flattener_pos_list
+    const_orient_list = bead_orient_list +flattener_orient_list
 
     assert len(const_type_list) == len(const_pos_list) == len(const_orient_list)
 
@@ -172,7 +176,21 @@ def Run_implementation(job, communicator):
         "orientations":      const_orient_list
     }
     rigid.create_bodies(sim.state)
-    
+
+    diameter = np.append(diameter, bead_diam, axis=0)
+    diameter = np.append(diameter, flattener_diam, axis=0)
+    print('check diam: ', diameter)
+
+
+    #diams:    
+    mesh_diam = [mesh_sigma] * N_mesh
+    A_diam = [sigma] * N_active
+    diameter = np.append(mesh_diam,A_diam,axis=0)
+    diameter = np.append(diameter, bead_diam, axis=0)
+    diameter = np.append(diameter, flattener_diam, axis=0)
+    print('check diam: ', diameter)
+
+    '''
     # Create initial gsd
     snapshot = sim.state.get_snapshot()
     frame = gsd.hoomd.Frame()
@@ -180,67 +198,65 @@ def Run_implementation(job, communicator):
     frame.particles.position = snapshot.particles.position
     frame.particles.orientation = snapshot.particles.orientation
     frame.particles.typeid = snapshot.particles.typeid
-    #frame.particles.diameter = snapshot.particles.diameter
+    frame.particles.diameter = diameter
     frame.particles.types = snapshot.particles.types
+    frame.particles.body = snapshot.particles.body # need to add this line to save rigid body diams
     frame.configuration.box = snapshot.configuration.box
-    
-    with gsd.hoomd.open(name=job.fn('initial_wRigid.gsd'), mode='w') as f:
-        f.append(frame)
+    '''
 
-
-    #############################################    
+    #############################################
     ## Set up filters and integrator
     #############################################
 
     filter_all  = hoomd.filter.All()
     filter_mesh = hoomd.filter.Type(['mesh'])
     filter_free = hoomd.filter.Rigid(("center","free"))
-    
+
     integrator = hoomd.md.Integrator(
-            dt=dt, 
-            rigid=rigid, 
+            dt=SP.dt,
+            rigid=rigid,
             integrate_rotational_dof=True)
     sim.operations.integrator = integrator
 
-    langevin = hoomd.md.methods.Langevin(filter=filter_free, kT=kT)
+    langevin = hoomd.md.methods.Langevin(filter=filter_free, kT=SP.kT)
     langevin.gamma.default = gamma
     langevin.gamma_r.default = [gamma,gamma,gamma]
     integrator.methods.append(langevin)
 
-
     #############################################
     ## Add potentials
     #############################################
-    
-    cell = hoomd.md.nlist.Cell(buffer=0.4, exclusions=['meshbond'])
 
+    ideal_buffer = 0.5
+    cell = hoomd.md.nlist.Cell(buffer=ideal_buffer, exclusions=['meshbond','body'])
+    
     # Expanded LJ:
     ExpLJ = hoomd.md.pair.ExpandedLJ(nlist=cell, mode="shift", default_r_cut=0)
-    
+
     unit_sigma = sigma
     deltas = np.ones((3,3))
-    sigmas = [sigma, mesh_sigma, filler_sigma]
+    sigmas = [sigma, mesh_sigma, flattener_sigma]
     for i in range(len(sigmas)):
         for j in range(len(sigmas)):
             deltas[i][j] = (sigmas[i] + sigmas[j])/2 - unit_sigma
 
     ExpLJ.params.default = dict(epsilon=0, sigma=unit_sigma, delta=0)
-    ExpLJ.params[('mesh','mesh')] = dict(epsilon=1, 
-                                         sigma=unit_sigma, 
+    ExpLJ.params[('mesh','mesh')] = dict(epsilon=1,
+                                         sigma=unit_sigma,
                                          delta=deltas[1][1])
     ExpLJ.params[('mesh','A'),
-                 ('mesh','A_const')] = dict(epsilon=1, 
-                                            sigma = unit_sigma, 
+                 ('mesh','A_const')] = dict(epsilon=1,
+                                            sigma = unit_sigma,
                                             delta=deltas[0][1])
-    ExpLJ.params[('A_filler','A'),
-                 ('A_filler','A_const')] = dict(epsilon=1,
-                                                sigma=unit_sigma, 
+    ExpLJ.params[('A_flattener','A'),
+                 ('A_flattener','A_const')] = dict(epsilon=1,
+                                                sigma=unit_sigma,
                                                 delta=deltas[0][2])
-    ExpLJ.params[('A_filler','mesh')] = dict(epsilon=1, 
-                                             sigma=unit_sigma, 
+    ExpLJ.params[('A_flattener','mesh')] = dict(epsilon=1,
+                                             sigma=unit_sigma,
                                              delta=deltas[1][2])
-    ExpLJ.params[('A_filler','A_filler')] = dict(epsilon=0, 
-                                                 sigma=unit_sigma, 
+    ExpLJ.params[('A_flattener','A_flattener')] = dict(epsilon=0,
+                                                 sigma=unit_sigma,
                                                  delta=deltas[2][2])
 
     ExpLJ.r_cut[('A','A'),
@@ -249,10 +265,10 @@ def Run_implementation(job, communicator):
     ExpLJ.r_cut[('mesh','A'),
                 ('mesh','A_const')] = 2**(1.0/6)*(unit_sigma)+deltas[0][1]
     ExpLJ.r_cut[('mesh','mesh')] = 2**(1.0/6.)*(unit_sigma)+deltas[1][1]
-    ExpLJ.r_cut[('A_filler','A'),
-                ('A_filler','A_const')] = 2**(1.0/6)*unit_sigma + deltas[0][2]
-    ExpLJ.r_cut[('A_filler','mesh')] = 2**(1.0/6)*(unit_sigma) + deltas[1][2]
-    ExpLJ.r_cut[('A_filler','A_filler')] = 0
+    ExpLJ.r_cut[('A_flattener','A'),
+                ('A_flattener','A_const')] = 2**(1.0/6)*unit_sigma + deltas[0][2]
+    ExpLJ.r_cut[('A_flattener','mesh')] = 2**(1.0/6)*(unit_sigma) + deltas[1][2]
+    ExpLJ.r_cut[('A_flattener','A_flattener')] = 0
 
     integrator.forces.append(ExpLJ)
 
@@ -261,7 +277,7 @@ def Run_implementation(job, communicator):
 
     mesh_bond_potential = hoomd.md.mesh.bond.Tether(mesh_obj)
     mesh_bond_potential.params["mesh"] = dict(
-            k_b=k_bond,
+            k_b=SP.k_bond,
             l_min=l_min,
             l_c1=l_c1,
             l_c0=l_c0,
@@ -270,37 +286,61 @@ def Run_implementation(job, communicator):
 
     # Helfrich bending potential:
     helfrich_potential = hoomd.md.mesh.bending.Helfrich(mesh_obj)
-    helfrich_potential.params["mesh"] = dict(k=k_bend)
+    helfrich_potential.params["mesh"] = dict(k=SP.k_bend)
     integrator.forces.append(helfrich_potential)
 
     # Area conservation potential:
-    k_area = 50
-    TriArea = 4 * np.pi * R**2 / len(faces)
+    k_area = SP.k_area_f
+    
+    snapshot = sim.state.get_snapshot()
+    if snapshot.communicator.rank == 0:
+        all_positions = snapshot.particles.position
+        R_vert_avg = np.mean(all_positions[snapshot.particles.typeid == 0])
+    TriArea = 4 * np.pi * R_vert_avg**2 / N_tri
+   
+    # NOTE: Need to add mesh object still. 
+
     area_potential = hoomd.md.mesh.conservation.TriangleArea(mesh_obj)
     area_potential.params.default = dict(k=k_area, A0=TriArea)
     integrator.forces.append(area_potential)
+    
+    area_potential.params.default = dict(k=k_area, A0=TriArea)
 
     # Add wall:
     wall = [hoomd.wall.Plane(origin=(0, 0, -R-sigma), normal=(0, 0, 1))]
     wlj = hoomd.md.external.wall.LJ(walls=wall)
     wlj.params['mesh'] = {"sigma": unit_sigma, "epsilon": 1.0, "r_cut": 2**(1/6)*unit_sigma}
-    wlj.params[['A','A_const','A_filler']] = {"epsilon": 0.0, "sigma": 1.0, "r_cut": 0.}
+    wlj.params[['A','A_const','A_flattener']] = {"epsilon": 0.0, "sigma": 1.0, "r_cut": 0.}
     integrator.forces.append(wlj)
-    
+
 
     #############################################
     ## Initialize the simulation
     #############################################
 
-    # Initialize: 
-    sim.state.thermalize_particle_momenta(filter=filter_all, kT=kT)
-    sim.run(0)
-    print('Successfully ran for 0 timestep.\n')
+    snap = sim.state.get_snapshot()
+    print('after potentials:', snap.particles.diameter)
+
+    # GSD logger:
+    logger = hoomd.logging.Logger(['particle','constraint'])
+    gsd_oper = hoomd.write.GSD(trigger=hoomd.trigger.Periodic(int(500)), #int(2000)
+                               filename=job.fn('active.gsd'),
+                               logger=logger, mode='wb',
+                               dynamic=['momentum','property','attribute/particles/diameter'],
+                               filter=filter_all)
+    gsd_oper.write_diameter = True
+    sim.operations += gsd_oper
     
-    print('Equilibrating mesh...')
-    sim.run(5000)
+    k_area = SP.k_area_f
+
+    snapshot = sim.state.get_snapshot()
+    if snapshot.communicator.rank == 0:
+        all_positions = snapshot.particles.position
+        R_vert_avg = np.mean(all_positions[snapshot.particles.typeid == 0])
+    TriArea = 4 * np.pi * R_vert_avg**2 / len(faces)
+    area_potential.params.default = dict(k=k_area, A0=TriArea)
     
-    while k_area < k_area_f:
+    while k_area < SP.k_area_f:
         snapshot = sim.state.get_snapshot()
         if snapshot.communicator.rank == 0:
             all_positions = snapshot.particles.position
@@ -309,73 +349,83 @@ def Run_implementation(job, communicator):
         k_area *= 2
         area_potential.params.default = dict(k=k_area, A0=TriArea)
         sim.run(5000)
-    
-    k_area = k_area_f
+
+    k_area = SP.k_area_f
     area_potential.params.default = dict(k=k_area, A0=TriArea)
     print('k_area set to: ', k_area)
     sim.run(5000)
-    
+
     # Add gravity:
     print('\nAdding gravity...')
     mass_mesh_particle = 1
-    #mass_frac = mass_mesh_particle * sphero_vol / (4/3* np.pi * mesh_sigma**3)
     gravity = hoomd.md.force.Constant(filter=hoomd.filter.All())
-    gravity.constant_force['A'] = (0,0,-gravity_ratio*gravity_strength)
-    gravity.constant_force['A_const','A_filler'] = (0,0,0)
-    gravity.constant_force['mesh'] = (0,0,-gravity_strength)
-    gravity.constant_torque['mesh','A','A_const','A_filler'] = (0,0,0)
+    #gravity.constant_force['A'] = (0,0,-SP.gravity_strength)
+    gravity.constant_force['A'] = (0,0,F_const_rod)
+    gravity.constant_force['A'] = (0,0,0)
+    gravity.constant_force['A_const','A_flattener'] = (0,0,0)
+    #gravity.constant_force['mesh'] = (0,0,-SP.gravity_strength)
+    gravity.constant_force['mesh'] = (0,0,F_const_mesh)
+    gravity.constant_force['mesh'] = (0,0,0)
+    gravity.constant_torque['mesh','A','A_const','A_flattener'] = (0,0,0)
 
     integrator.forces.append(gravity)
     sim.run(10000)
 
-    # Add rod active force:
-    print('\nAdding active force...')
-    active = hoomd.md.force.Active(filter=hoomd.filter.Type(['A']))
-    active.active_force['A'] = (v0,0,0)    
-    active.active_torque['A'] = (0,0,0)
-    integrator.forces.append(active)
 
     #############################################
     ## Run the simulation
     #############################################
     print('\nFinish equilibrating simulation...')
-    while sim.timestep < equiltime:
-        sim.run(10000)
-        print('step: ', sim.timestep)
-
-    print('\nCurrent state:')
-    print_state(sigma, mesh_sigma, filler_sigma, num_filler, N_active, deltas, gravity_strength, torque_mag, job)
-    
-    # GSD logger:
-    logger = hoomd.logging.Logger(['particle','constraint'])
-    gsd_oper = hoomd.write.GSD(trigger=hoomd.trigger.Periodic(int(1000)),
-                               filename=job.fn('active.gsd'),
-                               logger=logger, mode='wb',
-                               dynamic=['momentum','property'],
-                               filter=filter_all)
-    sim.operations += gsd_oper
-
-    print('\nRunning simulation...')
-    while sim.timestep < runtime:
+    while sim.timestep < SP.equiltime - 10000:
         sim.run(10000)
         gsd_oper.flush()
         print('step: ', sim.timestep)
 
-    os.rename(job.fn('Run.out.in_progress'), job.fn('Run.out'))
     
+    # Add rod active force:
+    print('\nAdding active force...')
+    active = hoomd.md.force.Active(filter=hoomd.filter.Type(['A']))
+    active.active_force['A'] = (SP.v0,0,0)
+    active.active_torque['A'] = (0,0,0)
+    integrator.forces.append(active)
+
+    sim.run(10000)
+    gsd_oper.flush()
+
+    print('\nCurrent state:')
+    print_state(sigma, mesh_sigma, flattener_sigma, num_flattener, N_active, num_beads, bead_spacing, N_mesh, R, SP.aspect_rat, SP.freedom_rat, deltas, SP.gravity_strength, SP.torque_mag, job)
+
+    # Initialize
+    sim.run(0)
+    print('Successfully ran for 0 timestep.\n')
+
+    
+    
+    print('\nRunning simulation...')
+    while sim.timestep < SP.runtime:
+        sim.run(10000)
+        gsd_oper.flush()
+        print('step: ', sim.timestep)
+
+
+    os.rename(job.fn('Run.out.in_progress'), job.fn('Run.out'))
+
     print('Simulation complete.')
+
+    snap = sim.state.get_snapshot()
+    print('particle size:', snap.particles.diameter)
 
 def Run(*jobs):
     processes_per_directory = os.environ['ACTION_PROCESSES_PER_DIRECTORY']
     communicator = hoomd.communicator.Communicator()
     Run_implementation(jobs[communicator.partition], communicator)
-    
+
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument('--action', required=True)
     parser.add_argument('directories', nargs='+')
     args = parser.parse_args()
-    
+
     project = signac.get_project()
     jobs = [project.open_job(id=directory) for directory in args.directories]
     globals()[args.action](*jobs)
