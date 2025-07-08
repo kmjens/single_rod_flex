@@ -1,4 +1,4 @@
-## Boilerplate:
+## Boilerplate
 import argparse
 import datetime
 import freud
@@ -42,12 +42,12 @@ def Setup_implementation(job, communicator):
     mesh_gamma_r = [mesh_gamma/3.0, mesh_gamma/3.0, mesh_gamma/3.0]
     
     # Particle num and mesh scaling
-    N_active    = int(job.cached_statepoint['N_active'])
+    N_active       = int(job.cached_statepoint['N_active'])
     num_flattener  = job.cached_statepoint['num_flattener'] # num on one active particle
     N_flattener    = 2 * num_flattener * N_active # including all active particles
-    num_beads   = int(job.cached_statepoint['num_beads']) #number of beads including the center particle in rigid body
+    num_beads      = int(job.cached_statepoint['num_beads']) #number of beads including the center particle in rigid body
     num_const_beads = int(num_beads - 1) # neglecting middle particle
-    N_bead      = num_const_beads * N_active
+    N_bead   = num_const_beads * N_active
     
     rod_length   = SP.aspect_rat * sigma
     bead_spacing = (SP.aspect_rat - 1) / (num_const_beads - 1)
@@ -59,10 +59,14 @@ def Setup_implementation(job, communicator):
 
     TriArea = SP.TriArea
     num_tri = int(4 * np.pi * R**2 / TriArea)
-    N_mesh  = num_tri + 2
+    N_mesh = num_tri + 2
     N_particles = N_mesh + N_active + N_bead + N_flattener
     
-    # Buoyant force and gravitational force
+    # Active, buoyant, and gravitational forces
+    fA = SP.fA
+    Pe = sigma * fA / SP.kT
+    print('Peclet Number = ', Pe)
+
     BG = BuoyancyAndGravity(R, N_mesh, cylinder_vol)
     F_const_mesh    = BG.F_const_mesh
     F_const_rod     = BG.F_const_rod
@@ -196,6 +200,7 @@ def Setup_implementation(job, communicator):
     frame.particles.mass = mass
     frame.particles.position = snapshot.particles.position
     frame.particles.orientation = snapshot.particles.orientation
+    frame.particles.moment_inertia = snapshot.particles.moment_inertia
     frame.particles.typeid = snapshot.particles.typeid
     frame.particles.diameter = diameter
     frame.particles.types = snapshot.particles.types
@@ -210,8 +215,6 @@ def Setup_implementation(job, communicator):
     state = sim.create_state_from_gsd(filename=job.fn('initial_wRigid.gsd'))
 
     snap = sim.state.get_snapshot()
-    #print('diam after initial gsd:', snap.particles.diameter)
-    #print('mass after initial gsd:', snap.particles.mass)
 
     #############################################
     ## Set up filters and integrator
@@ -300,7 +303,7 @@ def Setup_implementation(job, communicator):
 
     # Helfrich bending potential:
     helfrich_potential = hoomd.md.mesh.bending.Helfrich(mesh_obj)
-    helfrich_potential.params["mesh"] = dict(k=(SP.k_bend * SP.kT))
+    helfrich_potential.params["mesh"] = dict(k=SP.k_bend)
     integrator.forces.append(helfrich_potential)
 
     # Area conservation potential:
@@ -327,7 +330,7 @@ def Setup_implementation(job, communicator):
 
     # GSD logger:
     logger = hoomd.logging.Logger(['particle','constraint'])
-    gsd_oper = hoomd.write.GSD(trigger=hoomd.trigger.Periodic(int(2000)), #int(2000)
+    gsd_oper = hoomd.write.GSD(trigger=hoomd.trigger.Periodic(int(10000)), #int(2000)
                                filename=job.fn('Setup.gsd'),
                                logger=logger, mode='wb',
                                dynamic=['momentum','property','attribute','attribute/particles/diameter'],
@@ -361,11 +364,6 @@ def Setup_implementation(job, communicator):
     print('k_area set to: ', k_area)
     sim.run(5000)
 
-    # Calculate fake gravity for debugging:
-    #F_const_rod = 0
-    #F_const_mesh = 0 
-
-
     # Add gravity:
     print('\nAdding gravity...')
     gravity = hoomd.md.force.Constant(filter=hoomd.filter.All())
@@ -389,7 +387,7 @@ def Setup_implementation(job, communicator):
     # Add rod active force:
     print('\nAdding active force...')
     active = hoomd.md.force.Active(filter=hoomd.filter.Type(['A']))
-    active.active_force['A'] = (SP.v0,0,0)
+    active.active_force['A'] = (SP.fA,0,0)
     active.active_torque['A'] = (0,0,0)
     integrator.forces.append(active)
 
@@ -410,13 +408,13 @@ def Setup_implementation(job, communicator):
     print('step: ', sim.timestep)
 
     print('\nCurrent state:')
-    print_state(sigma, mesh_sigma, flattener_sigma, N_particles, num_flattener, N_active, num_beads, bead_spacing, N_mesh, R, SP.aspect_rat, SP.freedom_rat, deltas, SP.torque_mag, mass_mesh_bead, mass_rod, F_const_rod, F_const_mesh, job)
+    print_state(sigma, mesh_sigma, flattener_sigma, N_particles, num_flattener, N_active, num_beads, bead_spacing, N_mesh, R, SP.aspect_rat, SP.freedom_rat, Pe, deltas, SP.torque_mag, mass_mesh_bead, mass_rod, F_const_rod, F_const_mesh, job)
 
     
     os.rename(job.fn('Setup.out.in_progress'), job.fn('Setup.out'))
 
     print('Initialization complete.')
-    gsd_demo = hoomd.write.GSD(trigger=hoomd.trigger.Periodic(int(2000)), #int(2000)
+    gsd_demo = hoomd.write.GSD(trigger=hoomd.trigger.Periodic(int(10000)), #int(2000)
                                filename=job.fn('Demo.gsd'),
                                logger=logger, mode='wb',
                                dynamic=['momentum','property','attribute','attribute/particles/diameter'],
