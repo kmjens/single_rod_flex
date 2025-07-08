@@ -417,7 +417,7 @@ def Setup_implementation(job, communicator):
     os.rename(job.fn('Initialization.out.in_progress'), job.fn('Initilization.out'))
 
     print('Initialization complete.')
-    '''
+    
     gsd_run = hoomd.write.GSD(trigger=hoomd.trigger.Periodic(int(10000)), #int(2000)
                                filename=job.fn('Run.gsd'),
                                logger=logger, mode='wb',
@@ -431,7 +431,6 @@ def Setup_implementation(job, communicator):
         sim.run(10000)
         gsd_oper.flush()
         print('step: ', sim.timestep)
-    '''
 
 
     # triangle_tags: shape (n_triangles, 3), dtype=int
