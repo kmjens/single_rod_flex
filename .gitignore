@@ -13,12 +13,13 @@ signac.rc
 signac_project_document.json
 vis.ovito
 templates/
+tests/
 test.gsd
 experimental_data/
 output_files/
 manuscript/
 analysis/
 aggregated_results.csv
-init_*.py
+init*.py
 heatmaps/
 heatmaps/*

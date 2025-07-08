@@ -26,7 +26,7 @@ class JobParser:
         self.R       = job.cached_statepoint['R']
         self.N_mesh  = int(job.cached_statepoint['N_mesh'])
         self.dt      = job.cached_statepoint['dt']
-        self.v0      = job.cached_statepoint['v0']
+        self.fA      = job.cached_statepoint['fA']
         self.simseed = job.cached_statepoint['seed']
         self.runtime     = job.cached_statepoint['runtime']
         self.equiltime   = job.cached_statepoint['equiltime']
@@ -118,7 +118,7 @@ def get_tether_params(frame, triangle_tags):
 
     return(l_min, l_c1, l_c0, l_max)
 
-def print_state(sigma, mesh_sigma, flattener_sigma, N_particles,  num_flattener, N_active, num_beads, bead_spacing, N_mesh, R, aspect_rat, freedom_rat, deltas, torque_mag, mass_mesh_bead, mass_rod, F_const_rod, F_const_mesh, job):
+def print_state(sigma, mesh_sigma, flattener_sigma, N_particles,  num_flattener, N_active, num_beads, bead_spacing, N_mesh, R, aspect_rat, freedom_rat, Pe, deltas, torque_mag, mass_mesh_bead, mass_rod, F_const_rod, F_const_mesh, job):
     print('sigma: ', sigma)
     print('mesh_sigma: ', mesh_sigma)
     print('flattener_sigma: ', flattener_sigma)
@@ -136,6 +136,9 @@ def print_state(sigma, mesh_sigma, flattener_sigma, N_particles,  num_flattener,
     print('aspect_rat: ', aspect_rat)
     print('freedom_rat: ', freedom_rat)
     
+    print('\n')
+    print('Peclet number: ', Pe)
+
     print('\n')
     print('mass_mesh_bead: ',mass_mesh_bead)
     print('mass_rod: ',mass_rod)
@@ -167,6 +170,7 @@ def print_state(sigma, mesh_sigma, flattener_sigma, N_particles,  num_flattener,
         print('mesh R: ', R, file=f)
         print('aspect_rat: ', aspect_rat,file=f)
         print('freedom_rat: ', freedom_rat,file=f)
+        print('Peclet number: ', Pe, file=f)
 
         print('\n',file=f)
         print('mass_mesh_bead: ',mass_mesh_bead,file=f)
