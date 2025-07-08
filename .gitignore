@@ -19,6 +19,6 @@ output_files/
 manuscript/
 analysis/
 aggregated_results.csv
-init*.py
+init_*.py
 heatmaps/
 heatmaps/*
