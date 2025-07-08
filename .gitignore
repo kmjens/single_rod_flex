@@ -12,7 +12,6 @@ workspace/
 signac.rc
 signac_project_document.json
 vis.ovito
-templates/
 tests/
 test.gsd
 experimental_data/
