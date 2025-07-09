@@ -30,6 +30,7 @@ class JobParser:
         self.simseed = job.cached_statepoint['seed']
         self.runtime     = job.cached_statepoint['runtime']
         self.equiltime   = job.cached_statepoint['equiltime']
+        self.num_beads   = int(job.cached_statepoint['num_beads'])
 
         self.k_bend   = job.cached_statepoint['k_bend']
         self.k_bond   = 4 * self.k_bend # based on general ratio lipid bilayers have
@@ -47,6 +48,7 @@ class JobParser:
         self.rand_orient     = job.cached_statepoint['rand_orient']
         self.active_angle    = job.cached_statepoint['active_angle']
         self.torque_mag      = job.cached_statepoint['torque_mag']
+        self.propel_dir      = job.cached_statepoint['propel_dir']
 
 
 class BuoyancyAndGravity:
@@ -118,7 +120,7 @@ def get_tether_params(frame, triangle_tags):
 
     return(l_min, l_c1, l_c0, l_max)
 
-def print_state(sigma, mesh_sigma, flattener_sigma, N_particles,  num_flattener, N_active, num_beads, bead_spacing, N_mesh, R, aspect_rat, freedom_rat, Pe, deltas, torque_mag, mass_mesh_bead, mass_rod, F_const_rod, F_const_mesh, job):
+def print_state(sigma, mesh_sigma, flattener_sigma, N_particles,  num_flattener, N_active, num_beads, bead_spacing, N_mesh, R, aspect_rat, freedom_rat, Pe, deltas, torque_mag, mass_mesh_bead, mass_rod, F_const_rod, F_const_mesh, job,propel_dir):
     print('sigma: ', sigma)
     print('mesh_sigma: ', mesh_sigma)
     print('flattener_sigma: ', flattener_sigma)
@@ -138,6 +140,7 @@ def print_state(sigma, mesh_sigma, flattener_sigma, N_particles,  num_flattener,
     
     print('\n')
     print('Peclet number: ', Pe)
+    print('Propulsion direction:', propel_dir)
 
     print('\n')
     print('mass_mesh_bead: ',mass_mesh_bead)

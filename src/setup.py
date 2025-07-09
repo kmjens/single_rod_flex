@@ -86,7 +86,7 @@ def Setup_implementation(job, communicator):
     ## Set up simulation object
     #############################################
 
-    device = hoomd.device.CPU(num_cpu_threads=communicator.num_ranks)
+    device = hoomd.device.CPU()
     sim = hoomd.Simulation(device=device)
     sim.seed = SP.simseed
 
@@ -389,9 +389,16 @@ def Setup_implementation(job, communicator):
 
     # Add rod active force:
     print('\nAdding active force...')
-    active = hoomd.md.force.Active(filter=hoomd.filter.Type(['A']))
-    active.active_force['A'] = (SP.fA,0,0)
-    active.active_torque['A'] = (0,0,0)
+    active = hoomd.md.force.Active(filter=hoomd.filter.Type(['A','A_const']))
+
+    if SP.propel_dir == 'perpendicular':
+        active.active_force['A'] = (0,SP.fA/SP.num_beads,0)
+        active.active_torque['A'] = (0,0,0)
+        active.active_force['A_const'] = (0,SP.fA/SP.num_beads,0)
+        active.active_torque['A_const'] = (0,0,0)
+    elif SP.propel_dir == 'parallel':
+        active.active_force['A'] = (SP.fA,0,0)
+        active.active_torque['A'] = (0,0,0)
     integrator.forces.append(active)
 
     sim.run(999)
@@ -411,7 +418,7 @@ def Setup_implementation(job, communicator):
     print('step: ', sim.timestep)
 
     print('\nCurrent state:')
-    print_state(sigma, mesh_sigma, flattener_sigma, N_particles, num_flattener, N_active, num_beads, bead_spacing, N_mesh, R, SP.aspect_rat, SP.freedom_rat, Pe, deltas, SP.torque_mag, mass_mesh_bead, mass_rod, F_const_rod, F_const_mesh, job)
+    print_state(sigma, mesh_sigma, flattener_sigma, N_particles, num_flattener, N_active, num_beads, bead_spacing, N_mesh, R, SP.aspect_rat, SP.freedom_rat, Pe, deltas, SP.torque_mag, mass_mesh_bead, mass_rod, F_const_rod, F_const_mesh, job, SP.propel_dir)
 
     
     os.rename(job.fn('Initialization.out.in_progress'), job.fn('Initilization.out'))
@@ -423,7 +430,7 @@ def Setup_implementation(job, communicator):
                                logger=logger, mode='wb',
                                dynamic=['momentum','property','attribute','attribute/particles/diameter'],
                                filter=filter_all)
-    gsd_demo.write_diameter = True
+    gsd_run.write_diameter = True
     sim.operations += gsd_run
     
     print('Running for demo...')

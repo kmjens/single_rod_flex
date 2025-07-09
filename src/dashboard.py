@@ -14,10 +14,10 @@ modules = [
 
 class MyDashboard(Dashboard):
     def job_title(self, job):
-        if int(job.sp["num_flattener"]) > 0:
-            title_str = "Flat"
+        if int(job.sp["propel_dir"]) == 'parallel':
+            title_str = "Parallel"
         else:
-            title_str = "Rounded"
+            title_str = "Perpendicular"
         
         return "{}, Aspect Ratio = {}, v0 = {}, Freedom Ratio = {}".format(title_str, job.sp["aspect_rat"], job.sp["v0"], job.sp["freedom_rat"])
         
