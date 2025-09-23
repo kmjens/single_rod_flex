@@ -32,8 +32,8 @@ gridspec = {
     "aspect_rat":   [3], #[3,4,5], # rod length in units of recalculated sigma
     "freedom_rat":  [1.5], #[2,3,4], # [2, 3, 4], # ratio of mesh diam to rod length (decides rod const. particle)
     "fA":           [5],
-    "runtime":      [5e6], #[8e7], #[5e6],
-    "equiltime":    [1e5], #[2e7], #[2e5], #[1e5],
+    "runtime":      [5e5], #[5e6], #[8e7], #[5e6],
+    "equiltime":    [1e4], #[2e7], #[2e5], #[1e5],
     
     # To flatten (approx cylinders)
     "num_flattener":    [20], #[0,10], #number of flattenr particles to flatten spherocylinder
@@ -44,6 +44,9 @@ gridspec = {
     "rand_orient":  ['False'],
     "active_angle": [0], #angle in degrees
     "torque_mag":   [0],
+
+    # Turn on/off dynamical bonding
+    "dynamical_bonding" = ['False'],
 }
 
 if __name__ == "__main__":

@@ -108,7 +108,7 @@ def Setup_implementation(job, communicator):
     mesh = pv.PolyData(mesh_position)
     faces = mesh.delaunay_3d().extract_geometry().faces.reshape((-1, 4))
     triangle_points = []
-    for face in faces:
+    for face in faces
         triangle_points.append(face[1:])
     triangle_tags = np.vstack((triangle_points))
 
@@ -316,6 +316,16 @@ def Setup_implementation(job, communicator):
     area_potential = hoomd.md.mesh.conservation.TriangleArea(mesh_obj)
     area_potential.params.default = dict(k=k_area, A0=TriArea)
     integrator.forces.append(area_potential)
+    
+    # Add dynamical bonding if specified
+    if SP.dynamical_bonding == "True"
+        mesh_updater = hoomd.md.update.MeshDynamicalBonding(
+                        trigger = hoomd.trigger.Periodic(100),
+                        mesh=mesh,
+                        kT=kT,
+                        forces=[mesh_bond_potential, helfrich_potential])
+
+        sim.operations.updaters.append(mesh_updater)
 
     # Add wall:
     wall = [hoomd.wall.Plane(origin=(0, 0, -R-sigma), normal=(0, 0, 1))]
@@ -377,6 +387,7 @@ def Setup_implementation(job, communicator):
     gravity.constant_torque['mesh','A','A_const','A_flattener'] = (0,0,0)
 
     integrator.forces.append(gravity)
+
 
     #############################################
     ## Run the simulation

@@ -48,6 +48,8 @@ class JobParser:
         self.active_angle    = job.cached_statepoint['active_angle']
         self.torque_mag      = job.cached_statepoint['torque_mag']
 
+        #dynamical_bonding
+        self.dynamical_bonding   = job.cached_statepoint['dynamical_bonding']
 
 class BuoyancyAndGravity:
     ''':
@@ -119,6 +121,9 @@ def get_tether_params(frame, triangle_tags):
     return(l_min, l_c1, l_c0, l_max)
 
 def print_state(sigma, mesh_sigma, flattener_sigma, N_particles,  num_flattener, N_active, num_beads, bead_spacing, N_mesh, R, aspect_rat, freedom_rat, Pe, deltas, torque_mag, mass_mesh_bead, mass_rod, F_const_rod, F_const_mesh, job):
+    
+    print('dynamical_bonding: ', job.cached_statepoint['dynamical_bonding'])
+    
     print('sigma: ', sigma)
     print('mesh_sigma: ', mesh_sigma)
     print('flattener_sigma: ', flattener_sigma)
@@ -158,6 +163,7 @@ def print_state(sigma, mesh_sigma, flattener_sigma, N_particles,  num_flattener,
     with open(state_log_file, "w") as f:
         print('job: ', job, file=f)
         print('statepoints: ', job.sp, '\n\n', file=f)
+        print('dynamical_bonding: ', job.cached_statepoint['dynamical_bonding'], file=f)
         print('N_particles: ', N_particles, file=f)
         print('sigma: ', sigma, file=f)
         print('mesh_sigma: ', mesh_sigma, file=f)
