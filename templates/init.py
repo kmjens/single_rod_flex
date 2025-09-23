@@ -46,7 +46,7 @@ gridspec = {
     "torque_mag":   [0],
 
     # Turn on/off dynamical bonding
-    "dynamical_bonding" = ['False'],
+    "dynamical_bonding": ['False'],
 }
 
 if __name__ == "__main__":
