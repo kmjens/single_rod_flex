@@ -1,0 +1,37 @@
+[workspace]
+value_file = "signac_statepoint.json"
+
+[default.action.submit_options.greatlakes]
+account="sglotzer0"
+
+[default.action.submit_options.anvil]
+account='dmr140129'
+partition = "shared"
+                                                                                            
+[[action]]
+name = "Setup"
+launchers =["mpi"]
+products = ['Setup.out']
+resources.walltime.per_submission = "01:00:00"
+resources.processes.per_directory = 1
+group.maximum_size=1
+command = "python setup.py --action $ACTION_NAME {directories}"
+
+[[action]]
+name = "Run"
+launchers =["mpi"]
+previous_actions = ["Setup"]
+products = ['Run.out']
+resources.walltime.per_submission = "01:00:00"
+resources.processes.per_directory = 1
+group.maximum_size=1
+command = "python project.py --action $ACTION_NAME {directories}"
+
+[[action]]
+name = "Analysis"
+launchers =["mpi"]
+#products = ['analysis_data.json']
+resources.walltime.per_submission = "01:00:00"
+resources.processes.per_directory = 1
+group.maximum_size=1
+command = "python analysis.py --action $ACTION_NAME {directories}"
