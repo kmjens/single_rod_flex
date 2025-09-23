@@ -205,6 +205,17 @@ def Run_implementation(job, communicator):
     integrator.forces.append(area_potential)
     print('k_area set to: ', k_area)
     
+    # Dynamical bonding updater:
+    dynamic_bonding = False
+
+    if dynamical_bonding:
+        mesh_updater = hoomd.md.update.MeshDynamicalBonding(
+                        trigger = hoomd.trigger.Periodic(100),
+                        mesh=mesh,
+                        kT=kT,
+                        forces=[mesh_bond_potential, helfrich_potential])
+
+        sim.operations.updaters.append(mesh_updater)    
 
     # Add wall:
     wall = [hoomd.wall.Plane(origin=(0, 0, -R-sigma), normal=(0, 0, 1))]
