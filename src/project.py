@@ -48,31 +48,22 @@ def Run_implementation(job, communicator):
     L            = R * 5 # box size
 
 
-    # Collect triangle Data
-    with open(job.fn("triangles.json"), "r") as f:
-        tri_data = json.load(f)
-
-    triangle_tags = tri_data["triangles"]
-    type_ids = tri_data.get("type_ids", [0] * len(triangle_tags))
-    num_tri = len(triangle_tags)
-    N_mesh = num_tri + 2
-
-
-    #N_mesh      = int(np.ceil(4 * np.pi * R**2 * 0.8))
     N_active    = int(job.cached_statepoint['N_active'])
     num_flattener  = job.cached_statepoint['num_flattener'] # num on one active particle
     N_flattener    = 2 * num_flattener * N_active # including all active particles
     num_beads   = int(job.cached_statepoint['num_beads']) #number of beads including the center particle in rigid body
     num_const_beads = int(num_beads - 1) # neglecting middle particle
     N_bead      = num_const_beads * N_active
-    N_particles = N_mesh + N_active + N_bead + N_flattener
+    N_particles = N_active + N_bead + N_flattener
+
+    TriArea = SP.TriArea
+    num_tri = int(4 * np.pi * R**2 / TriArea)
+    N_mesh = num_tri + 2
 
     # Buoyant force and gravitational force
     BG = BuoyancyAndGravity(R, N_mesh, cylinder_vol)
-    F_const_mesh    = BG.F_const_mesh
     F_const_rod     = BG.F_const_rod
     mass_rod        = BG.mass_rod
-    mass_mesh_bead  = BG.mesh_mass / N_mesh
 
     with open(job.fn('Run.out.in_progress'), 'w') as file:
         file.write('Initializing sim seed: ' + str(SP.simseed) + '\n')
@@ -82,7 +73,7 @@ def Run_implementation(job, communicator):
     ## Set up simulation object
     #############################################
 
-    device = hoomd.device.CPU(num_cpu_threads=communicator.num_ranks)
+    device = hoomd.device.CPU()
     sim = hoomd.Simulation(device=device)
     sim.seed = SP.simseed
 
@@ -101,7 +92,6 @@ def Run_implementation(job, communicator):
     #############################################
 
     filter_all  = hoomd.filter.All()
-    filter_mesh = hoomd.filter.Type(['mesh'])
     filter_free = hoomd.filter.Rigid(("center","free"))
 
     integrator = hoomd.md.Integrator(
@@ -121,104 +111,11 @@ def Run_implementation(job, communicator):
     #############################################
 
     ideal_buffer = 0.5
-    cell = hoomd.md.nlist.Cell(buffer=ideal_buffer, exclusions=['meshbond','body'])
+    cell = hoomd.md.nlist.Cell(buffer=ideal_buffer, exclusions=['body'])
     
-    # Expanded LJ:
-    ExpLJ = hoomd.md.pair.ExpandedLJ(nlist=cell, mode="shift", default_r_cut=0)
-
-    unit_sigma = sigma
-    deltas = np.ones((3,3))
-    sigmas = [sigma, mesh_sigma, flattener_sigma]
-    for i in range(len(sigmas)):
-        for j in range(len(sigmas)):
-            deltas[i][j] = (sigmas[i] + sigmas[j])/2 - unit_sigma
-
-    ExpLJ.params.default = dict(epsilon=0, sigma=unit_sigma, delta=0)
-    ExpLJ.params[('mesh','mesh')] = dict(epsilon=1,
-                                         sigma=unit_sigma,
-                                         delta=deltas[1][1])
-    ExpLJ.params[('mesh','A'),
-                 ('mesh','A_const')] = dict(epsilon=1,
-                                            sigma = unit_sigma,
-                                            delta=deltas[0][1])
-    ExpLJ.params[('A_flattener','A'),
-                 ('A_flattener','A_const')] = dict(epsilon=1,
-                                                sigma=unit_sigma,
-                                                delta=deltas[0][2])
-    ExpLJ.params[('A_flattener','mesh')] = dict(epsilon=1,
-                                             sigma=unit_sigma,
-                                             delta=deltas[1][2])
-    ExpLJ.params[('A_flattener','A_flattener')] = dict(epsilon=0,
-                                                 sigma=unit_sigma,
-                                                 delta=deltas[2][2])
-
-    ExpLJ.r_cut[('A','A'),
-                ('A_const','A'),
-                ('A_const','A_const')] = 2**(1.0/6.) * (unit_sigma) + deltas[0][0]
-    ExpLJ.r_cut[('mesh','A'),
-                ('mesh','A_const')] = 2**(1.0/6)*(unit_sigma)+deltas[0][1]
-    ExpLJ.r_cut[('mesh','mesh')] = 2**(1.0/6.)*(unit_sigma)+deltas[1][1]
-    ExpLJ.r_cut[('A_flattener','A'),
-                ('A_flattener','A_const')] = 2**(1.0/6)*unit_sigma + deltas[0][2]
-    ExpLJ.r_cut[('A_flattener','mesh')] = 2**(1.0/6)*(unit_sigma) + deltas[1][2]
-    ExpLJ.r_cut[('A_flattener','A_flattener')] = 0
-
-    integrator.forces.append(ExpLJ)
-
-   
-    # Set up mesh from previous directory
-    mesh_obj = hoomd.mesh.Mesh()
-    mesh_obj.types = ["mesh"]
-    mesh_obj.triangulation = dict(
-        type_ids=type_ids,
-        triangles=triangle_tags
-    )
-
-    
-    # Apply tethering potential to mesh:
-    l_min, l_c1, l_c0, l_max = get_tether_params(frame, triangle_tags)
-
-    mesh_bond_potential = hoomd.md.mesh.bond.Tether(mesh_obj)
-    mesh_bond_potential.params["mesh"] = dict(
-            k_b=SP.k_bond,
-            l_min=l_min,
-            l_c1=l_c1,
-            l_c0=l_c0,
-            l_max=l_max)
-    integrator.forces.append(mesh_bond_potential)
-
-    # Helfrich bending potential:
-    helfrich_potential = hoomd.md.mesh.bending.Helfrich(mesh_obj)
-    helfrich_potential.params["mesh"] = dict(k=SP.k_bend)
-    integrator.forces.append(helfrich_potential)
-
-    # Area conservation potential:
-    k_area = SP.k_area_f
-    snapshot = sim.state.get_snapshot()
-    if snapshot.communicator.rank == 0:
-        all_positions = snapshot.particles.position
-        R_vert_avg = np.mean(all_positions[snapshot.particles.typeid == 0])
-    TriArea = 4 * np.pi * R_vert_avg**2 / num_tri
-    
-    area_potential = hoomd.md.mesh.conservation.TriangleArea(mesh_obj)
-    area_potential.params.default = dict(k=k_area, A0=TriArea)
-    integrator.forces.append(area_potential)
-    print('k_area set to: ', k_area)
-    
-    # Dynamical bonding updater:
-    if SP.dynamic_bonding = 'True':
-        mesh_updater = hoomd.md.update.MeshDynamicalBonding(
-                        trigger = hoomd.trigger.Periodic(100),
-                        mesh=mesh,
-                        kT=kT,
-                        forces=[mesh_bond_potential, helfrich_potential])
-
-        sim.operations.updaters.append(mesh_updater)    
-
     # Add wall:
     wall = [hoomd.wall.Plane(origin=(0, 0, -R-sigma), normal=(0, 0, 1))]
     wlj = hoomd.md.external.wall.LJ(walls=wall)
-    wlj.params['mesh'] = {"sigma": unit_sigma, "epsilon": 1.0, "r_cut": 2**(1/6)*unit_sigma}
     wlj.params[['A','A_const','A_flattener']] = {"epsilon": 0.0, "sigma": 1.0, "r_cut": 0.}
     integrator.forces.append(wlj)
 
@@ -247,8 +144,7 @@ def Run_implementation(job, communicator):
     gravity = hoomd.md.force.Constant(filter=hoomd.filter.All())
     gravity.constant_force['A'] = (0,0,F_const_rod)
     gravity.constant_force['A_const','A_flattener'] = (0,0,0)
-    gravity.constant_force['mesh'] = (0,0,F_const_mesh)
-    gravity.constant_torque['mesh','A','A_const','A_flattener'] = (0,0,0)
+    gravity.constant_torque['A','A_const','A_flattener'] = (0,0,0)
 
     integrator.forces.append(gravity)
 
@@ -269,7 +165,7 @@ def Run_implementation(job, communicator):
 
 
     print('\nCurrent state:')
-    print_state(sigma, mesh_sigma, flattener_sigma, N_particles, num_flattener, N_active, num_beads, bead_spacing, N_mesh, R, SP.aspect_rat, SP.freedom_rat, Pe, deltas, SP.torque_mag, mass_mesh_bead, mass_rod, F_const_rod, F_const_mesh, job)
+    print_state(sigma, flattener_sigma, N_particles, num_flattener, N_active, num_beads, bead_spacing, SP.aspect_rat, SP.freedom_rat, Pe, SP.torque_mag,  mass_rod, F_const_rod, job)
     
     # Initialize
     sim.run(0)

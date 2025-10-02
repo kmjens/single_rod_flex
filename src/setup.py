@@ -61,7 +61,7 @@ def Setup_implementation(job, communicator):
     TriArea = SP.TriArea
     num_tri = int(4 * np.pi * R**2 / TriArea)
     N_mesh = num_tri + 2
-    N_particles = N_mesh + N_active + N_bead + N_flattener
+    N_particles = N_active + N_bead + N_flattener
     
     # Active, buoyant, and gravitational forces
     fA = SP.fA
@@ -86,7 +86,8 @@ def Setup_implementation(job, communicator):
     ## Set up simulation object
     #############################################
 
-    device = hoomd.device.CPU(num_cpu_threads=communicator.num_ranks)
+    #device = hoomd.device.CPU(num_cpu_threads=communicator.num_ranks)
+    device = hoomd.device.CPU()
     sim = hoomd.Simulation(device=device)
     sim.seed = SP.simseed
 
@@ -95,31 +96,9 @@ def Setup_implementation(job, communicator):
     ## Particle placement
     #############################################
 
-    # Mesh:
-    x,y,z = fibonacci_sphere(num_pts=N_mesh, R=R)
-    mesh_position = np.column_stack((x,y,z))
-    mesh_orient = np.zeros((N_mesh,4),dtype=float)
-    mesh_orient[:,0] = 1
-    mesh_typeid = [0] * N_mesh
-    mesh_diam = [mesh_sigma] * N_mesh
-    mesh_MoI = np.zeros((N_mesh,3),dtype=float)
-    mesh_mass = [mass_mesh_bead] * N_mesh
-
-    mesh = pv.PolyData(mesh_position)
-    faces = mesh.delaunay_3d().extract_geometry().faces.reshape((-1, 4))
-    triangle_points = []
-    for face in faces
-        triangle_points.append(face[1:])
-    triangle_tags = np.vstack((triangle_points))
-
-    mesh_obj = hoomd.mesh.Mesh()
-    mesh_obj.types = ["mesh"]
-    mesh_obj.triangulation = dict(type_ids = [0] * len(triangle_tags),
-          triangles = triangle_tags)
-
 
     # Rod position:
-    A_position = [np.array([0,0,0])]
+    A_position = [np.array([0,0,0])] * N_active
     A_orient = np.zeros((len(A_position),4),dtype=float)
     A_orient[:,0] = 1
     A_typeid = np.ones(len(A_position),dtype=int)
@@ -135,15 +114,15 @@ def Setup_implementation(job, communicator):
     ## Set up frame
     #############################################
 
-    position = np.append(mesh_position,A_position,axis=0)
-    orientation = np.append(mesh_orient,A_orient,axis=0)
-    typeid = np.append(mesh_typeid,A_typeid,axis=0)
-    diameter = np.append(mesh_diam,A_diam,axis=0)
-    moment_inertia = np.append(mesh_MoI,A_MoI,axis=0)
-    mass = np.append(mesh_mass, A_mass, axis=0)
+    position = A_position
+    orientation = A_orient
+    typeid = A_typeid
+    diameter = A_diam
+    moment_inertia = A_MoI
+    mass = A_mass
 
     frame = gsd.hoomd.Frame()
-    frame.particles.N = N_mesh + N_active
+    frame.particles.N = N_active
     frame.particles.mass = mass 
     frame.particles.position = position[0:frame.particles.N]
     frame.particles.orientation = orientation[0:frame.particles.N]
@@ -151,7 +130,7 @@ def Setup_implementation(job, communicator):
     frame.particles.diameter = diameter[0:frame.particles.N]
     frame.particles.moment_inertia = moment_inertia[0:frame.particles.N]
     frame.configuration.box = [L, L, L, 0, 0, 0]
-    frame.particles.types = ['mesh','A','A_const','A_flattener']
+    frame.particles.types = ['A','A_const','A_flattener']
 
     with gsd.hoomd.open(name=job.fn('initial.gsd'), mode='w') as f:
        f.append(frame)
@@ -164,25 +143,43 @@ def Setup_implementation(job, communicator):
     #############################################
     # Construct rod rigid bodies
     #############################################
+    # Initialize lists
+    bead_type_list = []
+    bead_pos_list = []
+    bead_orient_list = []
+    bead_diam = []
+    bead_mass = []
 
-    bead_type_list = ['A_const'] * N_bead
-    bead_pos_list = get_bead_pos(rod_length, sigma, num_const_beads)
-    bead_orient_list = [(1,0,0,0)] * N_bead
-    bead_diam = [sigma] * N_bead
-    bead_mass = [0] * N_bead
+    flattener_type_list = []
+    flattener_pos_list = []
+    flattener_orient_list = []
+    flattener_diam = []
+    flattener_mass = []
 
-    flattener_type_list = ['A_flattener'] * (2 * num_flattener)
-    flattener_pos_list = get_flattener_pos(num_flattener, sigma, flattener_sigma, rod_length)
-    flattener_orient_list = [(1,0,0,0)] * (2 * num_flattener)
-    flattener_diam = [flattener_sigma] * N_flattener
-    flattener_mass = [0] * N_flattener
+    # Loop over all active rods
+    for i in range(N_active):
+        # Beads along the rod (excluding central particle)
+        bead_type_list.extend(['A_const'] * num_const_beads)
+        bead_pos_list.extend(get_bead_pos(rod_length, sigma, num_const_beads, rod_index=i))
+        bead_orient_list.extend([(1, 0, 0, 0)] * num_const_beads)
+        bead_diam.extend([sigma] * num_const_beads)
+        bead_mass.extend([0] * num_const_beads)
+        
+        # Flattener particles for this rod
+        flattener_type_list.extend(['A_flattener'] * (2 * num_flattener))
+        flattener_pos_list.extend(get_flattener_pos(num_flattener, sigma, flattener_sigma, rod_length, rod_index=i))
+        flattener_orient_list.extend([(1, 0, 0, 0)] * (2 * num_flattener))
+        flattener_diam.extend([flattener_sigma] * (2 * num_flattener))
+        flattener_mass.extend([0] * (2 * num_flattener))
 
+    # Combine constituent particles
     const_type_list = bead_type_list + flattener_type_list
     const_pos_list = bead_pos_list + flattener_pos_list
-    const_orient_list = bead_orient_list +flattener_orient_list
+    const_orient_list = bead_orient_list + flattener_orient_list
 
     assert len(const_type_list) == len(const_pos_list) == len(const_orient_list)
 
+    # Create rigid body objects
     rigid = hoomd.md.constrain.Rigid()
     rigid.body["A"] = {
         "constituent_types": const_type_list,
@@ -191,13 +188,11 @@ def Setup_implementation(job, communicator):
     }
     rigid.create_bodies(sim.state)
 
-    diameter = np.append(diameter, bead_diam, axis=0)
-    diameter = np.append(diameter, flattener_diam, axis=0)
+    # Combine with central particle arrays (already in `diameter`, `mass`)
+    diameter = np.append(diameter, bead_diam + flattener_diam)
+    mass = np.append(mass, bead_mass + flattener_mass)
 
-    mass = np.append(mass, bead_mass, axis=0)
-    mass = np.append(mass, flattener_mass, axis=0)
-    
-    # Create initial gsd
+    # Create initial GSD
     snapshot = sim.state.get_snapshot()
     frame = gsd.hoomd.Frame()
     frame.particles.N = len(snapshot.particles.position)
@@ -208,24 +203,23 @@ def Setup_implementation(job, communicator):
     frame.particles.typeid = snapshot.particles.typeid
     frame.particles.diameter = diameter
     frame.particles.types = snapshot.particles.types
-    frame.particles.body = snapshot.particles.body # need to add this line to have rigid body diams
+    frame.particles.body = snapshot.particles.body  # needed for rigid bodies
     frame.configuration.box = snapshot.configuration.box
 
     with gsd.hoomd.open(name=job.fn('initial_wRigid.gsd'), mode='w') as f:
         f.append(frame)
-    
+
+    # Reload simulation state
     sim = hoomd.Simulation(device=device)
     sim.seed = SP.simseed
     state = sim.create_state_from_gsd(filename=job.fn('initial_wRigid.gsd'))
-
-    snap = sim.state.get_snapshot()
+    snap = sim.state.get_snapshot()    
 
     #############################################
     ## Set up filters and integrator
     #############################################
 
     filter_all  = hoomd.filter.All()
-    filter_mesh = hoomd.filter.Type(['mesh'])
     filter_rigid = hoomd.filter.Rigid(("center","free"))
 
     integrator = hoomd.md.Integrator(
@@ -238,99 +232,19 @@ def Setup_implementation(job, communicator):
     langevin.gamma.default = gamma
     langevin.gamma_r.default = gamma_r
     integrator.methods.append(langevin)
-    ''' 
-    langevin_mesh = hoomd.md.methods.Langevin(filter=filter_mesh, kT=SP.kT)
-    langevin_mesh.gamma.default = mesh_gamma
-    langevin_mesh.gamma_r.default = mesh_gamma_r
-    integrator.methods.append(langevin_mesh)
-    '''
+    
     #############################################
     ## Add potentials
     #############################################
 
     ideal_buffer = 0.5
-    cell = hoomd.md.nlist.Cell(buffer=ideal_buffer, exclusions=['meshbond','body'])
+    cell = hoomd.md.nlist.Cell(buffer=ideal_buffer, exclusions=['body'])
 
-    # Expanded LJ:
-    ExpLJ = hoomd.md.pair.ExpandedLJ(nlist=cell, mode="shift", default_r_cut=0)
 
-    unit_sigma = sigma
-    deltas = np.ones((3,3))
-    sigmas = [sigma, mesh_sigma, flattener_sigma]
-    for i in range(len(sigmas)):
-        for j in range(len(sigmas)):
-            deltas[i][j] = (sigmas[i] + sigmas[j])/2 - unit_sigma
-
-    ExpLJ.params.default = dict(epsilon=0, sigma=unit_sigma, delta=0)
-    ExpLJ.params[('mesh','mesh')] = dict(epsilon=1,
-                                         sigma=unit_sigma,
-                                         delta=deltas[1][1])
-    ExpLJ.params[('mesh','A'),
-                 ('mesh','A_const')] = dict(epsilon=1,
-                                            sigma = unit_sigma,
-                                            delta=deltas[0][1])
-    ExpLJ.params[('A_flattener','A'),
-                 ('A_flattener','A_const')] = dict(epsilon=1,
-                                                sigma=unit_sigma,
-                                                delta=deltas[0][2])
-    ExpLJ.params[('A_flattener','mesh')] = dict(epsilon=1,
-                                             sigma=unit_sigma,
-                                             delta=deltas[1][2])
-    ExpLJ.params[('A_flattener','A_flattener')] = dict(epsilon=0,
-                                                 sigma=unit_sigma,
-                                                 delta=deltas[2][2])
-
-    ExpLJ.r_cut[('A','A'),
-                ('A_const','A'),
-                ('A_const','A_const')] = 2**(1.0/6.) * (unit_sigma) + deltas[0][0]
-    ExpLJ.r_cut[('mesh','A'),
-                ('mesh','A_const')] = 2**(1.0/6)*(unit_sigma)+deltas[0][1]
-    ExpLJ.r_cut[('mesh','mesh')] = 2**(1.0/6.)*(unit_sigma)+deltas[1][1]
-    ExpLJ.r_cut[('A_flattener','A'),
-                ('A_flattener','A_const')] = 2**(1.0/6)*unit_sigma + deltas[0][2]
-    ExpLJ.r_cut[('A_flattener','mesh')] = 2**(1.0/6)*(unit_sigma) + deltas[1][2]
-    ExpLJ.r_cut[('A_flattener','A_flattener')] = 0
-
-    integrator.forces.append(ExpLJ)
-
-    # Apply tethering potential to mesh:
-    l_min, l_c1, l_c0, l_max = get_tether_params(frame, triangle_tags)
-
-    mesh_bond_potential = hoomd.md.mesh.bond.Tether(mesh_obj)
-    mesh_bond_potential.params["mesh"] = dict(
-            k_b=SP.k_bond,
-            l_min=l_min,
-            l_c1=l_c1,
-            l_c0=l_c0,
-            l_max=l_max)
-    integrator.forces.append(mesh_bond_potential)
-
-    # Helfrich bending potential:
-    helfrich_potential = hoomd.md.mesh.bending.Helfrich(mesh_obj)
-    helfrich_potential.params["mesh"] = dict(k=SP.k_bend)
-    integrator.forces.append(helfrich_potential)
-
-    # Area conservation potential:
-    k_area = SP.k_area_i
-    TriArea = 4 * np.pi * R**2 / len(faces)
-    area_potential = hoomd.md.mesh.conservation.TriangleArea(mesh_obj)
-    area_potential.params.default = dict(k=k_area, A0=TriArea)
-    integrator.forces.append(area_potential)
-    
-    # Add dynamical bonding if specified
-    if SP.dynamical_bonding == "True"
-        mesh_updater = hoomd.md.update.MeshDynamicalBonding(
-                        trigger = hoomd.trigger.Periodic(100),
-                        mesh=mesh,
-                        kT=kT,
-                        forces=[mesh_bond_potential, helfrich_potential])
-
-        sim.operations.updaters.append(mesh_updater)
 
     # Add wall:
     wall = [hoomd.wall.Plane(origin=(0, 0, -R-sigma), normal=(0, 0, 1))]
     wlj = hoomd.md.external.wall.LJ(walls=wall)
-    wlj.params['mesh'] = {"sigma": unit_sigma, "epsilon": 1.0, "r_cut": 2**(1/6)*unit_sigma}
     wlj.params[['A','A_const','A_flattener']] = {"epsilon": 0.0, "sigma": 1.0, "r_cut": 0.}
     integrator.forces.append(wlj)
 
@@ -360,22 +274,6 @@ def Setup_implementation(job, communicator):
     snap = sim.state.get_snapshot()
     print('particle size:', snap.particles.diameter)
 
-    print('Equilibrating mesh...')
-    sim.run(5000)
-
-    while k_area < SP.k_area_f:
-        snapshot = sim.state.get_snapshot()
-        if snapshot.communicator.rank == 0:
-            all_positions = snapshot.particles.position
-            R_vert_avg = np.mean(all_positions[snapshot.particles.typeid == 0])
-        TriArea = 4 * np.pi * R_vert_avg**2 / len(faces)
-        k_area *= 2
-        area_potential.params.default = dict(k=k_area, A0=TriArea)
-        sim.run(5000)
-
-    k_area = SP.k_area_f
-    area_potential.params.default = dict(k=k_area, A0=TriArea)
-    print('k_area set to: ', k_area)
     sim.run(5000)
 
     # Add gravity:
@@ -383,8 +281,7 @@ def Setup_implementation(job, communicator):
     gravity = hoomd.md.force.Constant(filter=hoomd.filter.All())
     gravity.constant_force['A'] = (0,0,F_const_rod)
     gravity.constant_force['A_const','A_flattener'] = (0,0,0)
-    gravity.constant_force['mesh'] = (0,0,F_const_mesh)
-    gravity.constant_torque['mesh','A','A_const','A_flattener'] = (0,0,0)
+    gravity.constant_torque['A','A_const','A_flattener'] = (0,0,0)
 
     integrator.forces.append(gravity)
 
@@ -422,7 +319,7 @@ def Setup_implementation(job, communicator):
     print('step: ', sim.timestep)
 
     print('\nCurrent state:')
-    print_state(sigma, mesh_sigma, flattener_sigma, N_particles, num_flattener, N_active, num_beads, bead_spacing, N_mesh, R, SP.aspect_rat, SP.freedom_rat, Pe, deltas, SP.torque_mag, mass_mesh_bead, mass_rod, F_const_rod, F_const_mesh, job)
+    print_state(sigma, flattener_sigma, N_particles, num_flattener, N_active, num_beads, bead_spacing, SP.aspect_rat, SP.freedom_rat, Pe, SP.torque_mag, mass_rod, F_const_rod, job)
 
     
     os.rename(job.fn('Initialization.out.in_progress'), job.fn('Initilization.out'))
@@ -444,13 +341,6 @@ def Setup_implementation(job, communicator):
         print('step: ', sim.timestep)
     '''
 
-
-    # triangle_tags: shape (n_triangles, 3), dtype=int
-    triangle_tags = triangle_tags.tolist()
-
-    type_ids = [0] * len(triangle_tags)
-    with open(job.fn("triangles.json"), "w") as f:
-        json.dump({"triangles": triangle_tags, "type_ids": type_ids}, f)
 
     os.rename(job.fn('Setup.out.in_progress'), job.fn('Setup.out'))
     print('Setup complete.')

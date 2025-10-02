@@ -120,12 +120,12 @@ def get_tether_params(frame, triangle_tags):
 
     return(l_min, l_c1, l_c0, l_max)
 
-def print_state(sigma, mesh_sigma, flattener_sigma, N_particles,  num_flattener, N_active, num_beads, bead_spacing, N_mesh, R, aspect_rat, freedom_rat, Pe, deltas, torque_mag, mass_mesh_bead, mass_rod, F_const_rod, F_const_mesh, job):
+def print_state(sigma, flattener_sigma, N_particles,  num_flattener, N_active, num_beads, bead_spacing, aspect_rat, freedom_rat, Pe, torque_mag, mass_rod, F_const_rod, job):
     
+    print('active_angle: ', job.cached_statepoint['active_angle'])
     print('dynamical_bonding: ', job.cached_statepoint['dynamical_bonding'])
     
     print('sigma: ', sigma)
-    print('mesh_sigma: ', mesh_sigma)
     print('flattener_sigma: ', flattener_sigma)
 
     print('\n')
@@ -134,8 +134,6 @@ def print_state(sigma, mesh_sigma, flattener_sigma, N_particles,  num_flattener,
     print('N_active: ', N_active)
     print('num_beads: ', num_beads)
     print('bead_spacing:', bead_spacing)
-    print('N_mesh: ', N_mesh)
-    print('mesh R: ', R)
     
     print('\n')
     print('aspect_rat: ', aspect_rat)
@@ -145,14 +143,10 @@ def print_state(sigma, mesh_sigma, flattener_sigma, N_particles,  num_flattener,
     print('Peclet number: ', Pe)
 
     print('\n')
-    print('mass_mesh_bead: ',mass_mesh_bead)
     print('mass_rod: ',mass_rod)
     print('F_const_rod: ',F_const_rod)
-    print('F_const_mesh: ',F_const_mesh)
 
     print('\n')
-    print('deltas:')
-    print('AA: ', deltas[0][0], '\nAm: ', deltas[0][1], '\nAf: ', deltas[0][2], '\nfm: ',deltas[1][2], '\nff: ', deltas[2][2],'\nmm: ', deltas[1][1])
     
     if torque_mag == 0:
         print('torque off')
@@ -166,27 +160,19 @@ def print_state(sigma, mesh_sigma, flattener_sigma, N_particles,  num_flattener,
         print('dynamical_bonding: ', job.cached_statepoint['dynamical_bonding'], file=f)
         print('N_particles: ', N_particles, file=f)
         print('sigma: ', sigma, file=f)
-        print('mesh_sigma: ', mesh_sigma, file=f)
         print('flattener_sigma: ', flattener_sigma, file=f)
         print('num_flattener: ', num_flattener, file=f)
         print('N_active: ', N_active, file=f)
         print('num_beads: ', num_beads, file=f)
         print('bead_spacing:', bead_spacing, file=f)
-        print('N_mesh: ', N_mesh, file=f)
-        print('mesh R: ', R, file=f)
         print('aspect_rat: ', aspect_rat,file=f)
         print('freedom_rat: ', freedom_rat,file=f)
         print('Peclet number: ', Pe, file=f)
 
         print('\n',file=f)
-        print('mass_mesh_bead: ',mass_mesh_bead,file=f)
         print('mass_rod: ',mass_rod,file=f)
         print('F_const_rod: ',F_const_rod,file=f)
-        print('F_const_mesh: ',F_const_mesh,file=f)
 
-        print('deltas:', file=f)
-        print('AA: ', deltas[0][0], ' Am: ', deltas[0][1], ' Af: ', deltas[0][2], 
-              ' fm: ', deltas[1][2], ' ff: ', deltas[2][2], ' mm: ', deltas[1][1], file=f)
         if torque_mag == 0:
             print('torque off', file=f)
         else:
