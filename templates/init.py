@@ -27,7 +27,7 @@ gridspec = {
     "k_area_i": [100],
     "TriArea":  [0.3],
     "dt":       [0.0001],
-    "N_active":     [1],
+    "N_active":     [1000],
     "num_beads":    [7], #[5,7],
     "aspect_rat":   [3], #[3,4,5], # rod length in units of recalculated sigma
     "freedom_rat":  [1.5], #[2,3,4], # [2, 3, 4], # ratio of mesh diam to rod length (decides rod const. particle)
