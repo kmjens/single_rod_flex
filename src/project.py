@@ -211,10 +211,10 @@ def Run_implementation(job, communicator):
     print('k_area set to: ', k_area)
     
     # Dynamical bonding updater:
-    if SP.dynamic_bonding == 'True':
+    if SP.dynamical_bonding == 'True':
         mesh_updater = hoomd.md.update.MeshDynamicalBonding(
                         trigger = hoomd.trigger.Periodic(100),
-                        mesh=mesh,
+                        mesh=mesh_obj,
                         kT=kT,
                         forces=[mesh_bond_potential, helfrich_potential])
 
