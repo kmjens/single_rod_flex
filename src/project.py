@@ -87,7 +87,12 @@ def Run_implementation(job, communicator):
     #############################################
 
     #device = hoomd.device.CPU(num_cpu_threads=communicator.num_ranks)
-    device = hoomd.device.CPU()
+    #device = hoomd.device.CPU()
+    device = hoomd.device.CPU(communicator=communicator,
+                              message_filename=job.fn("run_output.txt"),
+                              notice_level=4)
+    notice_file = hoomd.device.NoticeFile(device)
+    
     sim = hoomd.Simulation(device=device)
     sim.seed = SP.simseed
 
