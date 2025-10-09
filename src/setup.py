@@ -113,7 +113,7 @@ def Setup_implementation(job, communicator):
     mesh = pv.PolyData(mesh_position)
     faces = mesh.delaunay_3d().extract_geometry().faces.reshape((-1, 4))
     triangle_points = []
-    for face in faces
+    for face in faces:
         triangle_points.append(face[1:])
     triangle_tags = np.vstack((triangle_points))
 
