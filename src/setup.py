@@ -327,7 +327,7 @@ def Setup_implementation(job, communicator):
         mesh_updater = hoomd.md.update.MeshDynamicalBonding(
                         trigger = hoomd.trigger.Periodic(100),
                         mesh=mesh,
-                        kT=kT,
+                        kT=SP.kT,
                         forces=[mesh_bond_potential, helfrich_potential])
 
         sim.operations.updaters.append(mesh_updater)
