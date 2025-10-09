@@ -442,7 +442,7 @@ def Run_implementation(job, communicator):
                                logger=logger, mode='wb',
                                dynamic=['momentum','property','attribute','attribute/particles/diameter'],
                                filter=filter_all)
-    gsd_demo.write_diameter = True
+    gsd_run.write_diameter = True
     sim.operations += gsd_run
     
     print('Running for demo...')
