@@ -18,7 +18,7 @@ import pyvista as pv
 from utility import *
 
 
-def Setup_implementation(job, communicator):
+def Run_implementation(job, communicator):
 
     #############################################
     ## Statepoints from init file
@@ -433,7 +433,10 @@ def Setup_implementation(job, communicator):
     os.rename(job.fn('Initialization.out.in_progress'), job.fn('Initilization.out'))
 
     print('Initialization complete.')
-    '''
+    
+    with open(job.fn('Run.out.in_progress'), 'w') as file:
+        file.write('Running sim seed: ' + str(SP.simseed) + '\n')
+    
     gsd_run = hoomd.write.GSD(trigger=hoomd.trigger.Periodic(int(10000)), #int(2000)
                                filename=job.fn('Run.gsd'),
                                logger=logger, mode='wb',
@@ -447,24 +450,25 @@ def Setup_implementation(job, communicator):
         sim.run(10000)
         gsd_oper.flush()
         print('step: ', sim.timestep)
+    
+
     '''
-
-
     # triangle_tags: shape (n_triangles, 3), dtype=int
     triangle_tags = triangle_tags.tolist()
 
     type_ids = [0] * len(triangle_tags)
     with open(job.fn("triangles.json"), "w") as f:
         json.dump({"triangles": triangle_tags, "type_ids": type_ids}, f)
+    '''
 
-    os.rename(job.fn('Setup.out.in_progress'), job.fn('Setup.out'))
-    print('Setup complete.')
+    os.rename(job.fn('Run.out.in_progress'), job.fn('Run.out'))
+    print('Run complete.')
 
 
-def Setup(*jobs):
+def Run(*jobs):
     processes_per_directory = os.environ['ACTION_PROCESSES_PER_DIRECTORY']
     communicator = hoomd.communicator.Communicator()
-    Setup_implementation(jobs[communicator.partition], communicator)
+    Run_implementation(jobs[communicator.partition], communicator)
 
 
 
