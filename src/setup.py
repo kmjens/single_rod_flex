@@ -323,7 +323,7 @@ def Setup_implementation(job, communicator):
     integrator.forces.append(area_potential)
     
     # Add dynamical bonding if specified
-    if SP.dynamical_bonding == "True"
+    if SP.dynamical_bonding == "True":
         mesh_updater = hoomd.md.update.MeshDynamicalBonding(
                         trigger = hoomd.trigger.Periodic(100),
                         mesh=mesh,
