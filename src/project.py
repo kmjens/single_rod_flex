@@ -29,6 +29,8 @@ def Run_implementation(job, communicator):
     
     SP = JobParser(job)
 
+    sim_type = SP.sim_type
+
     # Calculate sigmas
     sigma        = 1
     mesh_sigma   = SP.mesh_sigma_rat * sigma
@@ -122,41 +124,61 @@ def Run_implementation(job, communicator):
     mesh_obj.triangulation = dict(type_ids = [0] * len(triangle_tags),
           triangles = triangle_tags)
 
-
-    # Rod position:
-    A_position = [np.array([0,0,0])]
-    A_orient = np.zeros((len(A_position),4),dtype=float)
-    A_orient[:,0] = 1
-    A_typeid = np.ones(len(A_position),dtype=int)
-    A_diam = [sigma] * N_active
-    A_mass = [mass_rod] * N_active
-    A_MoI = np.zeros((len(A_position),3),dtype=float) # kg*m2 -- need to check unit convs?
-    A_MoI[:,0] = 0
-    A_MoI[:,1] = 1.0 / 12 * 5 * (rod_length * sigma)**2
-    A_MoI[:,2] = 1.0 / 12 * 5 * (rod_length * sigma)**2
+    if sim_type == "flex":
+        # Rod position:
+        A_position = [np.array([0,0,0])]
+        A_orient = np.zeros((len(A_position),4),dtype=float)
+        A_orient[:,0] = 1
+        A_typeid = np.ones(len(A_position),dtype=int)
+        A_diam = [sigma] * N_active
+        A_mass = [mass_rod] * N_active
+        A_MoI = np.zeros((len(A_position),3),dtype=float) # kg*m2 -- need to check unit convs?
+        A_MoI[:,0] = 0
+        A_MoI[:,1] = 1.0 / 12 * 5 * (rod_length * sigma)**2
+        A_MoI[:,2] = 1.0 / 12 * 5 * (rod_length * sigma)**2
 
 
     #############################################
     ## Set up frame
     #############################################
 
-    position = np.append(mesh_position,A_position,axis=0)
-    orientation = np.append(mesh_orient,A_orient,axis=0)
-    typeid = np.append(mesh_typeid,A_typeid,axis=0)
-    diameter = np.append(mesh_diam,A_diam,axis=0)
-    moment_inertia = np.append(mesh_MoI,A_MoI,axis=0)
-    mass = np.append(mesh_mass, A_mass, axis=0)
+    if sim_type =="flex":
+        position = np.append(mesh_position,A_position,axis=0)
+        orientation = np.append(mesh_orient,A_orient,axis=0)
+        typeid = np.append(mesh_typeid,A_typeid,axis=0)
+        diameter = np.append(mesh_diam,A_diam,axis=0)
+        moment_inertia = np.append(mesh_MoI,A_MoI,axis=0)
+        mass = np.append(mesh_mass, A_mass, axis=0)
 
-    frame = gsd.hoomd.Frame()
-    frame.particles.N = N_mesh + N_active
-    frame.particles.mass = mass 
-    frame.particles.position = position[0:frame.particles.N]
-    frame.particles.orientation = orientation[0:frame.particles.N]
-    frame.particles.typeid = typeid[0:frame.particles.N]
-    frame.particles.diameter = diameter[0:frame.particles.N]
-    frame.particles.moment_inertia = moment_inertia[0:frame.particles.N]
-    frame.configuration.box = [L, L, L, 0, 0, 0]
-    frame.particles.types = ['mesh','A','A_const','A_flattener']
+        frame = gsd.hoomd.Frame()
+        frame.particles.N = N_mesh + N_active
+        frame.particles.mass = mass 
+        frame.particles.position = position[0:frame.particles.N]
+        frame.particles.orientation = orientation[0:frame.particles.N]
+        frame.particles.typeid = typeid[0:frame.particles.N]
+        frame.particles.diameter = diameter[0:frame.particles.N]
+        frame.particles.moment_inertia = moment_inertia[0:frame.particles.N]
+        frame.configuration.box = [L, L, L, 0, 0, 0]
+        frame.particles.types = ['mesh','A','A_const','A_flattener']
+    
+    elif sim_type == "mesh_only":
+        position = mesh_position
+        orientation = mesh_orient
+        typeid = mesh_typeid
+        diameter = mesh_diam
+        moment_inertia = mesh_MoI
+        mass = mesh_mass
+
+        frame = gsd.hoomd.Frame()
+        frame.particles.N = N_mesh
+        frame.particles.mass = mass 
+        frame.particles.position = position[0:frame.particles.N]
+        frame.particles.orientation = orientation[0:frame.particles.N]
+        frame.particles.typeid = typeid[0:frame.particles.N]
+        frame.particles.diameter = diameter[0:frame.particles.N]
+        frame.particles.moment_inertia = moment_inertia[0:frame.particles.N]
+        frame.configuration.box = [L, L, L, 0, 0, 0]
+        frame.particles.types = ['mesh']
 
     with gsd.hoomd.open(name=job.fn('initial.gsd'), mode='w') as f:
        f.append(frame)
@@ -165,64 +187,67 @@ def Run_implementation(job, communicator):
     f = gsd.hoomd.open(name=job.fn('initial.gsd'),mode='r')
     frame = f[0]
 
-
-    #############################################
-    # Construct rod rigid bodies
-    #############################################
-
-    bead_type_list = ['A_const'] * N_bead
-    bead_pos_list = get_bead_pos(rod_length, sigma, num_const_beads)
-    bead_orient_list = [(1,0,0,0)] * N_bead
-    bead_diam = [sigma] * N_bead
-    bead_mass = [0] * N_bead
-
-    flattener_type_list = ['A_flattener'] * (2 * num_flattener)
-    flattener_pos_list = get_flattener_pos(num_flattener, sigma, flattener_sigma, rod_length)
-    flattener_orient_list = [(1,0,0,0)] * (2 * num_flattener)
-    flattener_diam = [flattener_sigma] * N_flattener
-    flattener_mass = [0] * N_flattener
-
-    const_type_list = bead_type_list + flattener_type_list
-    const_pos_list = bead_pos_list + flattener_pos_list
-    const_orient_list = bead_orient_list +flattener_orient_list
-
-    assert len(const_type_list) == len(const_pos_list) == len(const_orient_list)
-
-    rigid = hoomd.md.constrain.Rigid()
-    rigid.body["A"] = {
-        "constituent_types": const_type_list,
-        "positions":         const_pos_list,
-        "orientations":      const_orient_list
-    }
-    rigid.create_bodies(sim.state)
-
-    diameter = np.append(diameter, bead_diam, axis=0)
-    diameter = np.append(diameter, flattener_diam, axis=0)
-
-    mass = np.append(mass, bead_mass, axis=0)
-    mass = np.append(mass, flattener_mass, axis=0)
     
-    # Create initial gsd
-    snapshot = sim.state.get_snapshot()
-    frame = gsd.hoomd.Frame()
-    frame.particles.N = len(snapshot.particles.position)
-    frame.particles.mass = mass
-    frame.particles.position = snapshot.particles.position
-    frame.particles.orientation = snapshot.particles.orientation
-    frame.particles.moment_inertia = snapshot.particles.moment_inertia
-    frame.particles.typeid = snapshot.particles.typeid
-    frame.particles.diameter = diameter
-    frame.particles.types = snapshot.particles.types
-    frame.particles.body = snapshot.particles.body # need to add this line to have rigid body diams
-    frame.configuration.box = snapshot.configuration.box
+    if sim_type == "flex":
+        #############################################
+        # Construct rod rigid bodies
+        #############################################
 
-    with gsd.hoomd.open(name=job.fn('initial_wRigid.gsd'), mode='w') as f:
-        f.append(frame)
+        bead_type_list = ['A_const'] * N_bead
+        bead_pos_list = get_bead_pos(rod_length, sigma, num_const_beads)
+        bead_orient_list = [(1,0,0,0)] * N_bead
+        bead_diam = [sigma] * N_bead
+        bead_mass = [0] * N_bead
+
+        flattener_type_list = ['A_flattener'] * (2 * num_flattener)
+        flattener_pos_list = get_flattener_pos(num_flattener, sigma, flattener_sigma, rod_length)
+        flattener_orient_list = [(1,0,0,0)] * (2 * num_flattener)
+        flattener_diam = [flattener_sigma] * N_flattener
+        flattener_mass = [0] * N_flattener
+
+        const_type_list = bead_type_list + flattener_type_list
+        const_pos_list = bead_pos_list + flattener_pos_list
+        const_orient_list = bead_orient_list +flattener_orient_list
+
+        assert len(const_type_list) == len(const_pos_list) == len(const_orient_list)
+
+        rigid = hoomd.md.constrain.Rigid()
+        rigid.body["A"] = {
+            "constituent_types": const_type_list,
+            "positions":         const_pos_list,
+            "orientations":      const_orient_list
+        }
+        rigid.create_bodies(sim.state)
+
+        diameter = np.append(diameter, bead_diam, axis=0)
+        diameter = np.append(diameter, flattener_diam, axis=0)
+
+        mass = np.append(mass, bead_mass, axis=0)
+        mass = np.append(mass, flattener_mass, axis=0)
+        
+        # Create initial gsd
+        snapshot = sim.state.get_snapshot()
+        frame = gsd.hoomd.Frame()
+        frame.particles.N = len(snapshot.particles.position)
+        frame.particles.mass = mass
+        frame.particles.position = snapshot.particles.position
+        frame.particles.orientation = snapshot.particles.orientation
+        frame.particles.moment_inertia = snapshot.particles.moment_inertia
+        frame.particles.typeid = snapshot.particles.typeid
+        frame.particles.diameter = diameter
+        frame.particles.types = snapshot.particles.types
+        frame.particles.body = snapshot.particles.body # need to add this line to have rigid body diams
+        frame.configuration.box = snapshot.configuration.box
+
+        with gsd.hoomd.open(name=job.fn('initial_wRigid.gsd'), mode='w') as f:
+            f.append(frame)
     
     sim = hoomd.Simulation(device=device)
     sim.seed = SP.simseed
-    state = sim.create_state_from_gsd(filename=job.fn('initial_wRigid.gsd'))
-
+    if sim_type == "flex":
+        state = sim.create_state_from_gsd(filename=job.fn('initial_wRigid.gsd'))
+    else:
+        state = sim.create_state_from_gsd(filename=job.fn('initial.gsd'))
     snap = sim.state.get_snapshot()
 
     #############################################
@@ -231,7 +256,6 @@ def Run_implementation(job, communicator):
 
     filter_all  = hoomd.filter.All()
     filter_mesh = hoomd.filter.Type(['mesh'])
-    filter_rigid = hoomd.filter.Rigid(("center","free"))
 
     integrator = hoomd.md.Integrator(
             dt=SP.dt,
@@ -239,10 +263,13 @@ def Run_implementation(job, communicator):
             integrate_rotational_dof=True)
     sim.operations.integrator = integrator
 
-    langevin = hoomd.md.methods.Langevin(filter=filter_rigid, kT=SP.kT)
-    langevin.gamma.default = gamma
-    langevin.gamma_r.default = gamma_r
-    integrator.methods.append(langevin)
+    if sim_type == "flex":
+        filter_rigid = hoomd.filter.Rigid(("center","free"))
+        langevin = hoomd.md.methods.Langevin(filter=filter_rigid, kT=SP.kT)
+        langevin.gamma.default = gamma
+        langevin.gamma_r.default = gamma_r
+        integrator.methods.append(langevin)
+    
     ''' 
     langevin_mesh = hoomd.md.methods.Langevin(filter=filter_mesh, kT=SP.kT)
     langevin_mesh.gamma.default = mesh_gamma
@@ -254,7 +281,10 @@ def Run_implementation(job, communicator):
     #############################################
 
     ideal_buffer = 0.5
-    cell = hoomd.md.nlist.Cell(buffer=ideal_buffer, exclusions=['meshbond','body'])
+    if sim_type == "flex":
+        cell = hoomd.md.nlist.Cell(buffer=ideal_buffer, exclusions=['meshbond','body'])
+    else:
+        langevin = hoomd.md.methods.Langevin(filter=filter_rigid, kT=SP.kT)
 
     # Expanded LJ:
     ExpLJ = hoomd.md.pair.ExpandedLJ(nlist=cell, mode="shift", default_r_cut=0)
@@ -266,35 +296,38 @@ def Run_implementation(job, communicator):
         for j in range(len(sigmas)):
             deltas[i][j] = (sigmas[i] + sigmas[j])/2 - unit_sigma
 
-    ExpLJ.params.default = dict(epsilon=0, sigma=unit_sigma, delta=0)
-    ExpLJ.params[('mesh','mesh')] = dict(epsilon=1,
-                                         sigma=unit_sigma,
-                                         delta=deltas[1][1])
-    ExpLJ.params[('mesh','A'),
-                 ('mesh','A_const')] = dict(epsilon=1,
-                                            sigma = unit_sigma,
-                                            delta=deltas[0][1])
-    ExpLJ.params[('A_flattener','A'),
-                 ('A_flattener','A_const')] = dict(epsilon=1,
-                                                sigma=unit_sigma,
-                                                delta=deltas[0][2])
-    ExpLJ.params[('A_flattener','mesh')] = dict(epsilon=1,
+    
+    if sim_type == "flex":
+        ExpLJ.params.default = dict(epsilon=0, sigma=unit_sigma, delta=0)
+        ExpLJ.params[('mesh','mesh')] = dict(epsilon=1,
                                              sigma=unit_sigma,
-                                             delta=deltas[1][2])
-    ExpLJ.params[('A_flattener','A_flattener')] = dict(epsilon=0,
+                                             delta=deltas[1][1])
+        ExpLJ.params[('mesh','A'),
+                     ('mesh','A_const')] = dict(epsilon=1,
+                                                sigma = unit_sigma,
+                                                delta=deltas[0][1])
+        ExpLJ.params[('A_flattener','A'),
+                     ('A_flattener','A_const')] = dict(epsilon=1,
+                                                    sigma=unit_sigma,
+                                                    delta=deltas[0][2])
+        ExpLJ.params[('A_flattener','mesh')] = dict(epsilon=1,
                                                  sigma=unit_sigma,
-                                                 delta=deltas[2][2])
+                                                 delta=deltas[1][2])
+        ExpLJ.params[('A_flattener','A_flattener')] = dict(epsilon=0,
+                                                     sigma=unit_sigma,
+                                                     delta=deltas[2][2])
 
-    ExpLJ.r_cut[('A','A'),
-                ('A_const','A'),
-                ('A_const','A_const')] = 2**(1.0/6.) * (unit_sigma) + deltas[0][0]
-    ExpLJ.r_cut[('mesh','A'),
-                ('mesh','A_const')] = 2**(1.0/6)*(unit_sigma)+deltas[0][1]
-    ExpLJ.r_cut[('mesh','mesh')] = 2**(1.0/6.)*(unit_sigma)+deltas[1][1]
-    ExpLJ.r_cut[('A_flattener','A'),
-                ('A_flattener','A_const')] = 2**(1.0/6)*unit_sigma + deltas[0][2]
-    ExpLJ.r_cut[('A_flattener','mesh')] = 2**(1.0/6)*(unit_sigma) + deltas[1][2]
-    ExpLJ.r_cut[('A_flattener','A_flattener')] = 0
+        ExpLJ.r_cut[('A','A'),
+                    ('A_const','A'),
+                    ('A_const','A_const')] = 2**(1.0/6.) * (unit_sigma) + deltas[0][0]
+        ExpLJ.r_cut[('mesh','A'),
+                    ('mesh','A_const')] = 2**(1.0/6)*(unit_sigma)+deltas[0][1]
+        ExpLJ.r_cut[('mesh','mesh')] = 2**(1.0/6.)*(unit_sigma)+deltas[1][1]
+        ExpLJ.r_cut[('A_flattener','A'),
+                    ('A_flattener','A_const')] = 2**(1.0/6)*unit_sigma + deltas[0][2]
+        ExpLJ.r_cut[('A_flattener','mesh')] = 2**(1.0/6)*(unit_sigma) + deltas[1][2]
+        ExpLJ.r_cut[('A_flattener','A_flattener')] = 0
+    elif sim_type == "mesh_only":
 
     integrator.forces.append(ExpLJ)
 
