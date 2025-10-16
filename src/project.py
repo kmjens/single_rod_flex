@@ -124,7 +124,7 @@ def Run_implementation(job, communicator):
     mesh_obj.triangulation = dict(type_ids = [0] * len(triangle_tags),
           triangles = triangle_tags)
 
-    if sim_type == "flex":
+    if sim_type == "single_flex":
         # Rod position:
         A_position = [np.array([0,0,0])]
         A_orient = np.zeros((len(A_position),4),dtype=float)
@@ -142,7 +142,7 @@ def Run_implementation(job, communicator):
     ## Set up frame
     #############################################
 
-    if sim_type =="flex":
+    if sim_type =="single_flex":
         position = np.append(mesh_position,A_position,axis=0)
         orientation = np.append(mesh_orient,A_orient,axis=0)
         typeid = np.append(mesh_typeid,A_typeid,axis=0)
@@ -188,7 +188,7 @@ def Run_implementation(job, communicator):
     frame = f[0]
 
     
-    if sim_type == "flex":
+    if sim_type == "single_flex":
         #############################################
         # Construct rod rigid bodies
         #############################################
@@ -244,7 +244,7 @@ def Run_implementation(job, communicator):
     
     sim = hoomd.Simulation(device=device)
     sim.seed = SP.simseed
-    if sim_type == "flex":
+    if sim_type == "single_flex":
         state = sim.create_state_from_gsd(filename=job.fn('initial_wRigid.gsd'))
     else:
         state = sim.create_state_from_gsd(filename=job.fn('initial.gsd'))
@@ -262,8 +262,13 @@ def Run_implementation(job, communicator):
                 dt=SP.dt,
                 integrate_rotational_dof=True)
         sim.operations.integrator = integrator
+            
+        langevin_mesh = hoomd.md.methods.Langevin(filter=filter_mesh, kT=SP.kT)
+        langevin_mesh.gamma.default = mesh_gamma
+        langevin_mesh.gamma_r.default = mesh_gamma_r
+        integrator.methods.append(langevin_mesh)
 
-    if sim_type == "flex":
+    if sim_type == "single_flex":
         integrator = hoomd.md.Integrator(
                 dt=SP.dt,
                 rigid=rigid,
@@ -287,10 +292,10 @@ def Run_implementation(job, communicator):
     #############################################
 
     ideal_buffer = 0.5
-    if sim_type == "flex":
+    if sim_type == "single_flex":
         cell = hoomd.md.nlist.Cell(buffer=ideal_buffer, exclusions=['meshbond','body'])
     else:
-        langevin = hoomd.md.methods.Langevin(filter=filter_rigid, kT=SP.kT)
+        cell = hoomd.md.nlist.Cell(buffer=ideal_buffer, exclusions=['meshbond'])
 
     # Expanded LJ:
     ExpLJ = hoomd.md.pair.ExpandedLJ(nlist=cell, mode="shift", default_r_cut=0)
@@ -303,7 +308,7 @@ def Run_implementation(job, communicator):
             deltas[i][j] = (sigmas[i] + sigmas[j])/2 - unit_sigma
 
     
-    if sim_type == "flex":
+    if sim_type == "single_flex":
         ExpLJ.params.default = dict(epsilon=0, sigma=unit_sigma, delta=0)
         ExpLJ.params[('mesh','mesh')] = dict(epsilon=1,
                                              sigma=unit_sigma,
@@ -335,9 +340,7 @@ def Run_implementation(job, communicator):
         ExpLJ.r_cut[('A_flattener','A_flattener')] = 0
     
     elif sim_type == "mesh_only":
-        ExpLJ.params[('mesh','mesh')] = dict(epsilon=1,
-                                             sigma=unit_sigma,
-                                             delta=deltas[1][1])
+        ExpLJ.params[('mesh','mesh')] = dict(epsilon=1, sigma=unit_sigma, delta=deltas[1][1])
         ExpLJ.r_cut[('mesh','mesh')] = 2**(1.0/6.)*(unit_sigma)+deltas[1][1]
     
     integrator.forces.append(ExpLJ)
@@ -380,7 +383,7 @@ def Run_implementation(job, communicator):
     wall = [hoomd.wall.Plane(origin=(0, 0, -R-sigma), normal=(0, 0, 1))]
     wlj = hoomd.md.external.wall.LJ(walls=wall)
     wlj.params['mesh'] = {"sigma": unit_sigma, "epsilon": 1.0, "r_cut": 2**(1/6)*unit_sigma}
-    if sim_type == "flex":
+    if sim_type == "single_flex":
         wlj.params[['A','A_const','A_flattener']] = {"epsilon": 0.0, "sigma": 1.0, "r_cut": 0.}
     integrator.forces.append(wlj)
 
@@ -437,7 +440,7 @@ def Run_implementation(job, communicator):
     # Add gravity:
     print('\nAdding gravity...')
     gravity = hoomd.md.force.Constant(filter=hoomd.filter.All())
-    if sim_type == "flex":
+    if sim_type == "single_flex":
         gravity.constant_force['A'] = (0,0,F_const_rod)
         gravity.constant_force['A_const','A_flattener'] = (0,0,0)
         gravity.constant_force['mesh'] = (0,0,F_const_mesh)
@@ -458,7 +461,7 @@ def Run_implementation(job, communicator):
         gsd_oper.flush()
         print('step: ', sim.timestep)
 
-    if sim_type == "mesh_only":
+    if sim_type == "single_flex":
         # Add rod active force:
         print('\nAdding active force...')
         active = hoomd.md.force.Active(filter=hoomd.filter.Type(['A']))
@@ -509,7 +512,7 @@ def Run_implementation(job, communicator):
     
 
     ## Write out mesh_triangles:
-    if sim_type in ["flex","mesh_only"]:
+    if sim_type in ["single_flex","mesh_only"]:
         # triangle_tags: shape (n_triangles, 3), dtype=int
         triangle_tags = triangle_tags.tolist()
 
