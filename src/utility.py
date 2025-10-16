@@ -22,6 +22,8 @@ class JobParser:
     '''
     def __init__(self, job):
 
+        self.sim_type = job.cached_statepoint['sim_type']
+
         self.kT      = job.cached_statepoint['kT']
         self.R       = job.cached_statepoint['R']
         self.N_mesh  = int(job.cached_statepoint['N_mesh'])
@@ -122,6 +124,7 @@ def get_tether_params(frame, triangle_tags):
 
 def print_state(sigma, mesh_sigma, flattener_sigma, N_particles,  num_flattener, N_active, num_beads, bead_spacing, N_mesh, R, aspect_rat, freedom_rat, Pe, deltas, torque_mag, mass_mesh_bead, mass_rod, F_const_rod, F_const_mesh, job):
     
+    print("simulation type", job.cached_statepoint['sim_type'])
     print('dynamical_bonding: ', job.cached_statepoint['dynamical_bonding'])
     
     print('sigma: ', sigma)
@@ -163,6 +166,7 @@ def print_state(sigma, mesh_sigma, flattener_sigma, N_particles,  num_flattener,
     with open(state_log_file, "w") as f:
         print('job: ', job, file=f)
         print('statepoints: ', job.sp, '\n\n', file=f)
+        print("simulation type", job.cached_statepoint['sim_type'], file=f)
         print('dynamical_bonding: ', job.cached_statepoint['dynamical_bonding'], file=f)
         print('N_particles: ', N_particles, file=f)
         print('sigma: ', sigma, file=f)

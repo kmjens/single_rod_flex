@@ -11,10 +11,14 @@ def grid(gridspec):
     for values in itertools.product(*gridspec.values()):
         yield dict(zip(gridspec.keys(), values))
 
+#########################################################################################
+
 ## Baseline units:
 #       1 energy sim unit:  10kT = 24.94 kJ/mol
 #       1 length sim unit:  diameter of experimental rod = 3 um
 #       1 mass sim unit:    mass of 1 rod = 1.11 g/cm^3 * V_rod = 0.0313 g
+
+#########################################################################################
 
 gridspec = {
     "N_dup":    range(1), # num duplicates
@@ -26,17 +30,18 @@ gridspec = {
     "k_area_f": [10000], #[10000], #[1000, 10000],
     "k_area_i": [100],
     "TriArea":  [0.3],
+    "k_volume": [10],    
     "dt":       [0.0001],
     "N_active":     [1],
     "num_beads":    [7], #[5,7],
     "aspect_rat":   [3], #[3,4,5], # rod length in units of recalculated sigma
-    "freedom_rat":  [1.5], #[2,3,4], # [2, 3, 4], # ratio of mesh diam to rod length (decides rod const. particle)
+    "freedom_rat":  [1.3], #[2,3,4], # [2, 3, 4], # ratio of mesh diam to rod length (decides rod const. particle)
     "fA":           [5],
-    "runtime":      [5e5], #[5e6], #[8e7], #[5e6],
-    "equiltime":    [1e4], #[2e7], #[2e5], #[1e5],
+    "runtime":      [5e6],#[8e7], #[5e6], #[8e7], #[5e6],
+    "equiltime":    [2e5], #[2e7], #[2e7], #[2e5], #[1e5],
     
     # To flatten (approx cylinders)
-    "num_flattener":    [20], #[0,10], #number of flattenr particles to flatten spherocylinder
+    "num_flattener":    [20], #[0,10], #number of flattener particles to flatten spherocylinder
     "mesh_sigma_rat":   [0.333], # ratio of mesh particle diam to A diam
     "flattener_sigma_rat":  [0.25], # ratio of flattener particle diam to A diam 
 
@@ -46,7 +51,8 @@ gridspec = {
     "torque_mag":   [0],
 
     # Turn on/off dynamical bonding
-    "dynamical_bonding": ['False'],
+    "dynamical_bonding": ['True'],
+    "sim_type": ["mesh_only"] #Options: "mesh_only", "flex", "rods_only" (not yet implemented rod only on this branch)
 }
 
 if __name__ == "__main__":

@@ -257,13 +257,19 @@ def Run_implementation(job, communicator):
     filter_all  = hoomd.filter.All()
     filter_mesh = hoomd.filter.Type(['mesh'])
 
-    integrator = hoomd.md.Integrator(
-            dt=SP.dt,
-            rigid=rigid,
-            integrate_rotational_dof=True)
-    sim.operations.integrator = integrator
+    if sim_type == "mesh_only":
+        integrator = hoomd.md.Integrator(
+                dt=SP.dt,
+                integrate_rotational_dof=True)
+        sim.operations.integrator = integrator
 
     if sim_type == "flex":
+        integrator = hoomd.md.Integrator(
+                dt=SP.dt,
+                rigid=rigid,
+                integrate_rotational_dof=True)
+        sim.operations.integrator = integrator
+        
         filter_rigid = hoomd.filter.Rigid(("center","free"))
         langevin = hoomd.md.methods.Langevin(filter=filter_rigid, kT=SP.kT)
         langevin.gamma.default = gamma
@@ -327,8 +333,13 @@ def Run_implementation(job, communicator):
                     ('A_flattener','A_const')] = 2**(1.0/6)*unit_sigma + deltas[0][2]
         ExpLJ.r_cut[('A_flattener','mesh')] = 2**(1.0/6)*(unit_sigma) + deltas[1][2]
         ExpLJ.r_cut[('A_flattener','A_flattener')] = 0
+    
     elif sim_type == "mesh_only":
-
+        ExpLJ.params[('mesh','mesh')] = dict(epsilon=1,
+                                             sigma=unit_sigma,
+                                             delta=deltas[1][1])
+        ExpLJ.r_cut[('mesh','mesh')] = 2**(1.0/6.)*(unit_sigma)+deltas[1][1]
+    
     integrator.forces.append(ExpLJ)
 
     # Apply tethering potential to mesh:
@@ -369,7 +380,8 @@ def Run_implementation(job, communicator):
     wall = [hoomd.wall.Plane(origin=(0, 0, -R-sigma), normal=(0, 0, 1))]
     wlj = hoomd.md.external.wall.LJ(walls=wall)
     wlj.params['mesh'] = {"sigma": unit_sigma, "epsilon": 1.0, "r_cut": 2**(1/6)*unit_sigma}
-    wlj.params[['A','A_const','A_flattener']] = {"epsilon": 0.0, "sigma": 1.0, "r_cut": 0.}
+    if sim_type == "flex":
+        wlj.params[['A','A_const','A_flattener']] = {"epsilon": 0.0, "sigma": 1.0, "r_cut": 0.}
     integrator.forces.append(wlj)
 
 
@@ -401,6 +413,8 @@ def Run_implementation(job, communicator):
     print('Equilibrating mesh...')
     sim.run(5000)
 
+    # Tuning area potential
+
     while k_area < SP.k_area_f:
         snapshot = sim.state.get_snapshot()
         if snapshot.communicator.rank == 0:
@@ -415,14 +429,22 @@ def Run_implementation(job, communicator):
     area_potential.params.default = dict(k=k_area, A0=TriArea)
     print('k_area set to: ', k_area)
     sim.run(5000)
+    
+    # Tuning Volume Potential
+
+
 
     # Add gravity:
     print('\nAdding gravity...')
     gravity = hoomd.md.force.Constant(filter=hoomd.filter.All())
-    gravity.constant_force['A'] = (0,0,F_const_rod)
-    gravity.constant_force['A_const','A_flattener'] = (0,0,0)
-    gravity.constant_force['mesh'] = (0,0,F_const_mesh)
-    gravity.constant_torque['mesh','A','A_const','A_flattener'] = (0,0,0)
+    if sim_type == "flex":
+        gravity.constant_force['A'] = (0,0,F_const_rod)
+        gravity.constant_force['A_const','A_flattener'] = (0,0,0)
+        gravity.constant_force['mesh'] = (0,0,F_const_mesh)
+        gravity.constant_torque['mesh','A','A_const','A_flattener'] = (0,0,0)
+    if sim_type == "mesh_only":
+        gravity.constant_force['mesh'] = (0,0,F_const_mesh)
+        gravity.constant_torque['mesh'] = (0,0,0)
 
     integrator.forces.append(gravity)
 
@@ -436,12 +458,13 @@ def Run_implementation(job, communicator):
         gsd_oper.flush()
         print('step: ', sim.timestep)
 
-    # Add rod active force:
-    print('\nAdding active force...')
-    active = hoomd.md.force.Active(filter=hoomd.filter.Type(['A']))
-    active.active_force['A'] = (SP.fA,0,0)
-    active.active_torque['A'] = (0,0,0)
-    integrator.forces.append(active)
+    if sim_type == "mesh_only":
+        # Add rod active force:
+        print('\nAdding active force...')
+        active = hoomd.md.force.Active(filter=hoomd.filter.Type(['A']))
+        active.active_force['A'] = (SP.fA,0,0)
+        active.active_torque['A'] = (0,0,0)
+        integrator.forces.append(active)
 
     sim.run(999)
     
@@ -485,14 +508,15 @@ def Run_implementation(job, communicator):
         print('step: ', sim.timestep)
     
 
-    '''
-    # triangle_tags: shape (n_triangles, 3), dtype=int
-    triangle_tags = triangle_tags.tolist()
+    ## Write out mesh_triangles:
+    if sim_type in ["flex","mesh_only"]:
+        # triangle_tags: shape (n_triangles, 3), dtype=int
+        triangle_tags = triangle_tags.tolist()
 
-    type_ids = [0] * len(triangle_tags)
-    with open(job.fn("triangles.json"), "w") as f:
-        json.dump({"triangles": triangle_tags, "type_ids": type_ids}, f)
-    '''
+        type_ids = [0] * len(triangle_tags)
+        with open(job.fn("triangles.json"), "w") as f:
+            json.dump({"triangles": triangle_tags, "type_ids": type_ids}, f)
+    
 
     os.rename(job.fn('Run.out.in_progress'), job.fn('Run.out'))
     print('Run complete.')
