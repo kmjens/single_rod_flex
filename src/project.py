@@ -281,12 +281,11 @@ def Run_implementation(job, communicator):
         langevin.gamma_r.default = gamma_r
         integrator.methods.append(langevin)
     
-    ''' 
-    langevin_mesh = hoomd.md.methods.Langevin(filter=filter_mesh, kT=SP.kT)
-    langevin_mesh.gamma.default = mesh_gamma
-    langevin_mesh.gamma_r.default = mesh_gamma_r
-    integrator.methods.append(langevin_mesh)
-    '''
+        langevin_mesh = hoomd.md.methods.Langevin(filter=filter_mesh, kT=SP.kT)
+        langevin_mesh.gamma.default = mesh_gamma
+        langevin_mesh.gamma_r.default = mesh_gamma_r
+        integrator.methods.append(langevin_mesh)
+    
     #############################################
     ## Add potentials
     #############################################
