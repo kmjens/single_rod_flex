@@ -50,6 +50,7 @@ class JobParser:
 
         #dynamical_bonding
         self.dynamical_bonding   = job.cached_statepoint['dynamical_bonding']
+        self.confinement     = job.cached_statepoint['confinement']
 
 class BuoyancyAndGravity:
     ''':
@@ -124,6 +125,7 @@ def print_state(sigma, flattener_sigma, N_particles,  num_flattener, N_active, n
     
     print('active_angle: ', job.cached_statepoint['active_angle'])
     print('dynamical_bonding: ', job.cached_statepoint['dynamical_bonding'])
+    print('confinement: ', job.cached_statepoint['confinement'])
     
     print('sigma: ', sigma)
     print('flattener_sigma: ', flattener_sigma)

@@ -271,11 +271,20 @@ def Run_implementation(job, communicator):
     ideal_buffer = 0.5
     cell = hoomd.md.nlist.Cell(buffer=ideal_buffer, exclusions=['body'])
 
-    # Add wall:
-    wall = [hoomd.wall.Plane(origin=(0, 0, -sigma*(3/2)), normal=(0, 0, 1))]
-    wlj = hoomd.md.external.wall.LJ(walls=wall)
-    wlj.params[['A','A_const','A_flattener']] = {"epsilon": 0.0, "sigma": 1.0, "r_cut": 0.}
-    integrator.forces.append(wlj)
+    # Add confinement:
+    if SP.confinement == 'flat_wall': 
+        wall = [hoomd.wall.Plane(origin=(0, 0, -sigma*(3/2)), normal=(0, 0, 1))]
+        wlj = hoomd.md.external.wall.LJ(walls=wall)
+        wlj.params[['A','A_const']] = {"epsilon": 1.0, "sigma": sigma, "r_cut": 2**(1/6)*sigma}
+        wlj.params[['A_flattener']] = {"epsilon": 1.0, "sigma": flattener_sigma, "r_cut": 2**(1/6)*flattener_sigma}
+        integrator.forces.append(wlj)
+
+    elif SP.confinement == 'spherical_wall':
+        wall = hoomd.wall.Sphere(radius=R, inside=True) #Takes the R that would be the flexicle
+        wlj = hoomd.md.external.wall.LJ(walls=wall)
+        wlj.params[['A','A_const']] = {"epsilon": 1.0, "sigma": sigma, "r_cut": 2**(1/6)*sigma}
+        wlj.params[['A_flattener']] = {"epsilon": 1.0, "sigma": flattener_sigma, "r_cut": 2**(1/6)*flattener_sigma}
+        integrator.forces.append(wlj)
 
 
     #############################################
