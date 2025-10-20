@@ -186,16 +186,35 @@ def Run_implementation(job, communicator):
     full_sim_flattener_diam = [flattener_sigma] * int(2 * num_flattener  * N_active)
     full_sim_flattener_mass = [0] * int(2 * num_flattener  * N_active)
 
-    diameter = np.append(diameter, full_sim_bead_diam, axis=0)
-    diameter = np.append(diameter, full_sim_flattener_diam, axis=0)
+    ## Diameter list mismatch??
+    #diameter = np.append(diameter, full_sim_bead_diam, axis=0)
+    #diameter = np.append(diameter, full_sim_flattener_diam, axis=0)
 
-    mass = np.append(mass, full_sim_bead_mass, axis=0)
-    mass = np.append(mass, full_sim_flattener_mass, axis=0)
-
+    #mass = np.append(mass, full_sim_bead_mass, axis=0)
+    #mass = np.append(mass, full_sim_flattener_mass, axis=0)
 
 
     # Create initial GSD
     snapshot = sim.state.get_snapshot()
+
+    ## correctly append diameter and mass lists by mapping
+    typeid = np.array(snapshot.particles.typeid)
+    types = list(snapshot.particles.types)
+
+    diam_map = {
+        types.index('A'): sigma,
+        types.index('A_const'): sigma,
+        types.index('A_flattener'): flattener_sigma
+    }
+
+    diameter = np.array([diam_map[t] for t in typeid])
+
+    mass_map = {
+        types.index('A'): mass_rod,
+        types.index('A_const'): 0,
+        types.index('A_flattener'): 0
+    }
+    mass = np.array([mass_map[t] for t in typeid])
     
     print(len(mass))
     print(len(diameter))
@@ -213,6 +232,10 @@ def Run_implementation(job, communicator):
     frame.particles.types = snapshot.particles.types
     frame.particles.body = snapshot.particles.body  # needed for rigid bodies
     frame.configuration.box = snapshot.configuration.box
+
+    # Check diameters
+    print("typeids", frame.particles.typeid)
+    print("diameters: ", frame.particles.diameter)
 
     with gsd.hoomd.open(name=job.fn('initial_wRigid.gsd'), mode='w') as f:
         f.append(frame)
@@ -249,7 +272,7 @@ def Run_implementation(job, communicator):
     cell = hoomd.md.nlist.Cell(buffer=ideal_buffer, exclusions=['body'])
 
     # Add wall:
-    wall = [hoomd.wall.Plane(origin=(0, 0, -R-sigma), normal=(0, 0, 1))]
+    wall = [hoomd.wall.Plane(origin=(0, 0, -sigma*(3/2)), normal=(0, 0, 1))]
     wlj = hoomd.md.external.wall.LJ(walls=wall)
     wlj.params[['A','A_const','A_flattener']] = {"epsilon": 0.0, "sigma": 1.0, "r_cut": 0.}
     integrator.forces.append(wlj)
@@ -303,11 +326,11 @@ def Run_implementation(job, communicator):
 
     # Add rod active force:
     print('\nAdding active force...')
-    active = hoomd.md.force.Active(filter=hoomd.filter.Type(['A']))
-    active.active_force['A'] = (SP.fA * np.cos(np.deg2rad(SP.active_angle)),
-                                SP.fA * np.sin(np.deg2rad(SP.active_angle)),
-                                0)
-    active.active_torque['A'] = (0,0,0)
+    active = hoomd.md.force.Active(filter=hoomd.filter.Type(['A','A_const']))
+    active.active_force['A','A_const'] = ((SP.fA * np.cos(np.deg2rad(SP.active_angle)) / num_beads ),
+                                          (SP.fA * np.sin(np.deg2rad(SP.active_angle)) / num_beads),
+                                          0)
+    active.active_torque['A'] = (0,0,SP.torque_mag)
     integrator.forces.append(active)
 
     sim.run(999)
