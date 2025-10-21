@@ -143,16 +143,20 @@ def Analysis_implementation(job, communicator):
     ## Plot and save x-y trajectory for a single rod
     #############################################
 
-    for i in [0,1,2,3]:
+    for i in [0, 1, 2, 3]:
         rod_id = i  # which rod plotting
         active_x = active_com_positions[:, rod_id, 0]
         active_y = active_com_positions[:, rod_id, 1]
 
-        mid_color_active = cmap_blue(norm(timesteps[int(3*len(timesteps)/4)]))
+        mid_color_active = cmap_blue(norm(timesteps[int(3 * len(timesteps) / 4)]))
 
         fig, ax = plt.subplots(figsize=(6, 4))
         ax.set_facecolor('white')
 
+        # Plot trajectory lines connecting points
+        ax.plot(active_x * len_conv_um, active_y * len_conv_um, color='blue', alpha=0.5, linewidth=1)
+
+        # Scatter points on top
         sc_active = ax.scatter(
             active_x * len_conv_um, active_y * len_conv_um,
             c=timesteps, cmap=cmap_blue, norm=norm,
@@ -240,12 +244,12 @@ def Analysis_implementation(job, communicator):
     fig, ax = plt.subplots(figsize=(10, 6))
     ax.set_facecolor('white')
 
-    # Plot mean ± std
+    # Plot mean +/1 std
     ax.plot(timesteps, mean_total_distance_um, color='blue', label='Active rods (mean)')
     ax.fill_between(timesteps,
                     mean_total_distance_um - std_total_distance_um,
                     mean_total_distance_um + std_total_distance_um,
-                    color='blue', alpha=0.2, label='±1 std')
+                    color='blue', alpha=0.2, label='±1 stdev')
 
     ax.set_xlim(left=0, right=max(timesteps))
     ax.set_ylim(bottom=0)

@@ -56,7 +56,13 @@ def Run_implementation(job, communicator):
     cylinder_vol = rod_length * np.pi * (sigma / 2) ** 2
     vol_diff     = cylinder_vol - sphero_vol
     R            = (SP.freedom_rat * rod_length) / 2
-    L            = R * 5 # box size
+    wall_R       = SP.wall_R
+    
+    # Box size:
+    if SP.confinement == 'spherical_wall' and wall_R > R:
+        L = wall_R * 4
+    else:
+        L = R * 5 # box size
 
     TriArea = SP.TriArea
     num_tri = int(4 * np.pi * R**2 / TriArea)
@@ -306,15 +312,15 @@ def Run_implementation(job, communicator):
 
     sim.run(5000)
 
-    # Add gravity:
-    print('\nAdding gravity...')
-    gravity = hoomd.md.force.Constant(filter=hoomd.filter.All())
-    gravity.constant_force['A'] = (0,0,F_const_rod)
-    gravity.constant_force['A_const','A_flattener'] = (0,0,0)
-    gravity.constant_torque['A','A_const','A_flattener'] = (0,0,0)
+    if SP.gravity =="True":
+        # Add gravity:
+        print('\nAdding gravity...')
+        gravity = hoomd.md.force.Constant(filter=hoomd.filter.All())
+        gravity.constant_force['A'] = (0,0,F_const_rod)
+        gravity.constant_force['A_const','A_flattener'] = (0,0,0)
+        gravity.constant_torque['A','A_const','A_flattener'] = (0,0,0)
 
-    integrator.forces.append(gravity)
-
+        integrator.forces.append(gravity)
 
     #############################################
     ## Run the simulation
