@@ -186,18 +186,10 @@ def Run_implementation(job, communicator):
     full_sim_flattener_diam = [flattener_sigma] * int(2 * num_flattener  * N_active)
     full_sim_flattener_mass = [0] * int(2 * num_flattener  * N_active)
 
-    ## Diameter list mismatch??
-    #diameter = np.append(diameter, full_sim_bead_diam, axis=0)
-    #diameter = np.append(diameter, full_sim_flattener_diam, axis=0)
-
-    #mass = np.append(mass, full_sim_bead_mass, axis=0)
-    #mass = np.append(mass, full_sim_flattener_mass, axis=0)
-
-
     # Create initial GSD
     snapshot = sim.state.get_snapshot()
 
-    ## correctly append diameter and mass lists by mapping
+    ## Append diameter and mass lists in the right order by mapping
     typeid = np.array(snapshot.particles.typeid)
     types = list(snapshot.particles.types)
 
@@ -280,7 +272,7 @@ def Run_implementation(job, communicator):
         integrator.forces.append(wlj)
 
     elif SP.confinement == 'spherical_wall':
-        wall = hoomd.wall.Sphere(radius=R, inside=True) #Takes the R that would be the flexicle
+        wall = [hoomd.wall.Sphere(radius=SP.wall_R, inside=True)] #Takes the R that would be the flexicle
         wlj = hoomd.md.external.wall.LJ(walls=wall)
         wlj.params[['A','A_const']] = {"epsilon": 1.0, "sigma": sigma, "r_cut": 2**(1/6)*sigma}
         wlj.params[['A_flattener']] = {"epsilon": 1.0, "sigma": flattener_sigma, "r_cut": 2**(1/6)*flattener_sigma}

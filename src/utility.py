@@ -51,6 +51,7 @@ class JobParser:
         #dynamical_bonding
         self.dynamical_bonding   = job.cached_statepoint['dynamical_bonding']
         self.confinement     = job.cached_statepoint['confinement']
+        self.wall_R         = job.cached_statepoint['wall_R']
 
 class BuoyancyAndGravity:
     ''':
@@ -126,6 +127,7 @@ def print_state(sigma, flattener_sigma, N_particles,  num_flattener, N_active, n
     print('active_angle: ', job.cached_statepoint['active_angle'])
     print('dynamical_bonding: ', job.cached_statepoint['dynamical_bonding'])
     print('confinement: ', job.cached_statepoint['confinement'])
+    print('LJ wall R (if sphere confinement): ', job.cached_statepoint['wall_R'])
     
     print('sigma: ', sigma)
     print('flattener_sigma: ', flattener_sigma)
@@ -160,6 +162,8 @@ def print_state(sigma, flattener_sigma, N_particles,  num_flattener, N_active, n
         print('job: ', job, file=f)
         print('statepoints: ', job.sp, '\n\n', file=f)
         print('dynamical_bonding: ', job.cached_statepoint['dynamical_bonding'], file=f)
+        print('confinement: ', job.cached_statepoint['confinement'], file=f)
+        print('LJ wall R (if sphere confinement): ', job.cached_statepoint['wall_R'], file=f)
         print('N_particles: ', N_particles, file=f)
         print('sigma: ', sigma, file=f)
         print('flattener_sigma: ', flattener_sigma, file=f)
