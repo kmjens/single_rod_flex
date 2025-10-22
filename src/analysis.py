@@ -21,8 +21,8 @@ from scipy.fft import fft, fftfreq
 from scipy.spatial.transform import Rotation as Rot
 from matplotlib.lines import Line2D
 
+
 def Analysis_implementation(job, communicator):
-    
     #############################################
     ## Unit Conversions
     #############################################
@@ -41,244 +41,331 @@ def Analysis_implementation(job, communicator):
     len_conv_um = BG.len_conv *1e6
     step_to_sec = BG.time_conv * SP.dt
     
+
     #############################################
-    ## Open trajectory
+    ## Collect positions and orientations from GSD
     #############################################
-    
+
     f = gsd.pygsd.GSDFile(open(job.fn('Run.gsd'), 'rb'))
     traj = gsd.hoomd.HOOMDTrajectory(f)
-    n_frames = len(traj)
-    initial_frame = traj[0]
 
-    rod_indices = np.where(initial_frame.particles.typeid == 0)[0]
-    n_rods = len(rod_indices)
-
-    # Box for unwrapping
-    box = initial_frame.configuration.box
-    box_instance = freud.box.Box(Lx=box[0], Ly=box[1], Lz=box[2],
-                                 xy=box[3], xz=box[4], yz=box[5])
-
-    #############################################
-    # Allocate arrays
-    #############################################
-    
-    active_com_positions = np.empty((n_frames, n_rods, 3))
-    active_com_velocities = np.empty((n_frames, n_rods, 3))
-    active_com_orientation = np.empty((n_frames, 4))  # mean quaternion
-    normalized_velocities = np.empty((n_frames, 3))
-    total_distance_per_rod = np.zeros(n_rods)
-    disp_active = np.zeros((n_frames, n_rods))
-    active_total_distances = np.zeros((n_frames, n_rods))
-
-    racf = np.empty((n_frames, 3), dtype=complex)
-    prev_ori_exists = False
-
-    #############################################
-    # Time arrays
-    #############################################
-    
-    timesteps = np.arange(n_frames) * 10000
+    time_indices = np.arange(len(traj))
+    timesteps = time_indices * 10000
     timesteps_exp = timesteps * step_to_sec
-    freq = fftfreq(len(timesteps_exp), d=(timesteps_exp[1]-timesteps_exp[0]))
-    fft_xlim_max = timesteps_exp[-1]/5
-    norm = plt.Normalize(vmin=timesteps.min(), vmax=timesteps.max())
+
     cmap_blue = plt.get_cmap('Blues')
+    norm = plt.Normalize(vmin=timesteps.min(), vmax=timesteps.max())
+
+    active_com_positions = []   # (N_frames, N_active, 3)
+    active_com_velocities = []  # (N_frames, N_active, 3)
+    active_orientations = []    # (N_frames, N_active, 4)
+
+    for frame in traj:
+        pos = frame.particles.position
+        vel = frame.particles.velocity
+        types = frame.particles.typeid
+        orient = frame.particles.orientation
+
+        mask_active = (types == 0)
+
+        active_com_positions.append(pos[mask_active])
+        active_com_velocities.append(vel[mask_active])
+        active_orientations.append(orient[mask_active])
+
+    active_com_positions = np.array(active_com_positions)
+    active_com_velocities = np.array(active_com_velocities)
+    active_orientations = np.array(active_orientations)
+
+    print(f"Positions successfully read from GSD: {active_com_positions.shape[1]} active rods.")
 
     #############################################
-    # Loop over frames
+    ## Export per-rod trajectory to HDF5
     #############################################
-    
-    for i, frame in enumerate(traj):
-        pos = frame.particles.position[rod_indices]
-        img = frame.particles.image[rod_indices]
-        vel = frame.particles.velocity[rod_indices]
-        ori = frame.particles.orientation[rod_indices]
 
-        unwrapped_pos = box_instance.unwrap(pos, img)
-
-        active_com_positions[i] = unwrapped_pos
-        active_com_velocities[i] = vel
-        normalized_velocities[i] = vel.mean(axis=0) / (np.linalg.norm(vel.mean(axis=0)) + 1e-16)
-
-        # Mean quaternion
-        if len(ori) > 1:
-            r = Rot.from_quat(ori)
-            active_com_orientation[i] = r.mean().as_quat()
-        else:
-            active_com_orientation[i] = ori[0]
-
-        # Displacement and total distance
-        if i > 0:
-            disp = unwrapped_pos - active_com_positions[0]
-            disp_active[i] = np.linalg.norm(disp, axis=1)
-
-            vector = unwrapped_pos - active_com_positions[i-1]
-            step_dist = np.linalg.norm(vector, axis=1)
-            total_distance_per_rod += step_dist
-            active_total_distances[i] = total_distance_per_rod
-    
-        # Rotational autocorrelation
-        ori_norm = ori / np.linalg.norm(ori, axis=1, keepdims=True)
-        for j, l in enumerate([2,4,6]):
-            rac = freud.order.RotationalAutocorrelation(l)
-            if prev_ori_exists:
-                rac.compute(ref_orientations=prev_ori, orientations=ori_norm)
-                racf[i, j] = rac.particle_order.mean()   # <-- use mean
-        prev_ori = ori_norm
-        prev_ori_exists = True
-
-    #############################################
-    # Orientation spherical coordinates
-    #############################################
-    
-    quats = active_com_orientation / np.linalg.norm(active_com_orientation, axis=1, keepdims=True)
-    local_dir = np.tile([1,0,0], 1)
-    directions = np.array([Rot.from_quat([q[1],q[2],q[3],q[0]]).apply(local_dir) for q in quats])
-    x, y, z = directions[:,0], directions[:,1], directions[:,2]
-    theta = np.arccos(z)
-    phi = np.unwrap(np.arctan2(y, x))
-
-    #############################################
-    # FFTs
-    #############################################
-    
-    phi_fft = fft(np.degrees(phi))
-    theta_fft = fft(np.degrees(theta))
-    acf = quaternion_acf(active_com_orientation)
-    acf_fft = fft(acf)
-
-    #############################################
-    # Save per-rod trajectory to HDF5
-    #############################################
-    
     out_fn = job.fn("rod_data.h5")
+
     with h5py.File(out_fn, 'w') as f:
         f.create_dataset("timesteps", data=timesteps)
         f.create_dataset("positions", data=active_com_positions)
         f.create_dataset("velocities", data=active_com_velocities)
-        f.create_dataset("orientations", data=active_com_orientation)
-        f.attrs.update({
-            "num_frames": n_frames,
-            "num_rods": n_rods,
-            "len_conv_um": len_conv_um,
-            "speed_conv_mm": speed_conv_mm,
-            "step_to_sec": step_to_sec,
-            "description": "Per-rod trajectory data: positions, velocities, quaternions."
-        })
+        f.create_dataset("orientations", data=active_orientations)
+
+        f.attrs["num_frames"] = active_com_positions.shape[0]
+        f.attrs["num_rods"] = active_com_positions.shape[1]
+        f.attrs["len_conv_um"] = len_conv_um
+        f.attrs["speed_conv_mm"] = speed_conv_mm
+        f.attrs["step_to_sec"] = step_to_sec
+        f.attrs["description"] = (
+            "Per-rod trajectory data: positions, velocities, and quaternions "
+            "for each active rod at each frame."
+        )
+
     print(f"Saved per-rod trajectories, velocities, and orientations --> {out_fn}")
+    print(f"positions shape: {active_com_positions.shape}")
 
     #############################################
-    # Velocity magnitudes (mean COM)
+    ## Plot and save velocity magnitudes
     #############################################
-    
+
+    # Mean COM speed per frame
     active_com_v_norms = np.linalg.norm(active_com_velocities, axis=2).mean(axis=1)
-    fig, ax = plt.subplots(figsize=(10,6))
-    ax.plot(timesteps, active_com_v_norms, color='blue', label='Active rod')
+
+    fig, ax = plt.subplots(figsize=(10, 6))
+    ax.set_facecolor('white')
+    ax.plot(timesteps, active_com_v_norms, label="Active rod", color='blue')
+    ax.set_xlim(left=0, right=max(timesteps))
+    ax.set_ylim(bottom=0)
     ax.set_xlabel("Simulation Timestep")
     ax.set_ylabel("Speed (sim units)")
+
+    # experimental y-axis (mm/s)
     ax2 = ax.twinx()
     ax2.set_ylabel("Speed (mm/s)")
     ax2.set_yticks(ax.get_yticks())
-    ax2.set_yticklabels([f"{tick*speed_conv_mm:.2f}" for tick in ax.get_yticks()])
+    ax2.set_yticklabels([f"{tick * speed_conv_mm:.2f}" for tick in ax.get_yticks()])
+
+    # experimental x-axis (seconds)
     ax3 = ax.twiny()
     ax3.set_xlabel("Time (sec)")
     ax3.set_xticks(ax.get_xticks())
-    ax3.set_xticklabels([f"{tick*step_to_sec:.2f}" for tick in ax.get_xticks()])
+    ax3.set_xticklabels([f"{tick * step_to_sec:.2f}" for tick in ax.get_xticks()])
+
     ax.legend(loc='best')
     ax.set_title("Average Rod C.O.M. Speed")
-    fig.savefig(job.fn('velocity_magnitudes.png'), dpi=300, bbox_inches='tight')
+    ax.grid(True)
+    fig.savefig(job.fn('velocity_magnitudes.png'), dpi=300, bbox_inches='tight', facecolor='white')
     plt.close()
 
     #############################################
-    # XY Trajectories (first 4 rods)
+    ## Plot and save x-y trajectory for a single rod
     #############################################
-    
-    for i in range(min(4, n_rods)):
-        rod_x = active_com_positions[:,i,0]
-        rod_y = active_com_positions[:,i,1]
-        fig, ax = plt.subplots(figsize=(6,4))
-        ax.plot(rod_x*len_conv_um, rod_y*len_conv_um, color='blue', alpha=0.5, lw=1)
-        sc = ax.scatter(rod_x*len_conv_um, rod_y*len_conv_um, c=timesteps,
-                        cmap=cmap_blue, norm=norm, s=9, alpha=0.7, edgecolor='none')
-        cbar = fig.colorbar(sc)
-        cbar.set_label("Simulation Timestep")
-        ax.set_xlabel("X-Position (um)")
-        ax.set_ylabel("Y-Position (um)")
-        ax.axis('equal'); ax.grid(True)
-        fig.savefig(job.fn(f'xy_traj_particle_{i}.png'), dpi=150, bbox_inches='tight')
+
+    for i in [0, 1, 2, 3]:
+        rod_id = i  # which rod plotting
+        active_x = active_com_positions[:, rod_id, 0]
+        active_y = active_com_positions[:, rod_id, 1]
+
+        mid_color_active = cmap_blue(norm(timesteps[int(3 * len(timesteps) / 4)]))
+
+        fig, ax = plt.subplots(figsize=(6, 4))
+        ax.set_facecolor('white')
+
+        # Plot trajectory lines connecting points
+        ax.plot(active_x * len_conv_um, active_y * len_conv_um, color='blue', alpha=0.5, linewidth=1)
+
+        # Scatter points on top
+        sc_active = ax.scatter(
+            active_x * len_conv_um, active_y * len_conv_um,
+            c=timesteps, cmap=cmap_blue, norm=norm,
+            label="Active rod", s=9, alpha=0.7, edgecolor='none'
+        )
+        cbar_active = fig.colorbar(sc_active, orientation='vertical', fraction=0.05, pad=0.02)
+        cbar_active.set_label('Simulation Timestep')
+
+        ax.legend(handles=[Line2D([0], [0], marker='o', color='w',
+                                  markerfacecolor=mid_color_active, markersize=9,
+                                  label="Active rod")], loc='best')
+
+        ax.set_xlabel(r"X-Position ($\mu$m)")
+        ax.set_ylabel(r"Y-Position ($\mu$m)")
+        ax.set_title(f"Rod {rod_id} X-Y Trajectory")
+        ax.axis('equal')
+        ax.grid()
+        fig.savefig(job.fn(f'xy_traj_particle_{i}.png'), dpi=150, bbox_inches='tight', facecolor='white')
         plt.close()
 
-    #############################################
-    # Z position (mean over rods)
-    #############################################
-    
-    active_z_mean = active_com_positions[:,:,2].mean(axis=1)
-    fig, ax = plt.subplots(figsize=(10,6))
-    ax.plot(timesteps, (active_z_mean + 3/2)*len_conv_um, color='blue', alpha=0.8)
+    print('XY Trajectories plotted.')
+
+    ## Plot distance above flat surface
+    active_z = active_com_positions[:, :, 2].mean(axis=1)  # mean z over rods
+
+    fig, ax = plt.subplots(figsize=(10, 6))
+    ax.set_facecolor('white')
+    ax.plot(timesteps, (active_z+3/2)*len_conv_um, label="Active rod", color='blue', alpha=0.8)
     ax.set_xlabel("Simulation Timestep")
-    ax.set_ylabel("Z-Position (um)")
-    ax.grid(True)
+    ax.set_ylabel(r"Z-Position ($\mu$m)")
+
+    ax.set_xlim(left=0)
+    ax.set_xlim(right=max(timesteps))
+
+    ax.legend(loc='best')
+    ax.set_title(f"Distance Above Flat Surface")
+
     ax3 = ax.twiny()
-    ax3.set_xlabel("Time (sec)")
+    ax3.set_xlabel(r"Time (sec)")
     ax3.set_xticks(ax.get_xticks())
-    ax3.set_xticklabels([f"{tick*step_to_sec:.2f}" for tick in ax.get_xticks()])
-    fig.savefig(job.fn('d_from_floor.png'), dpi=300, bbox_inches='tight')
+    ax3.set_xticklabels([f"{tick * step_to_sec:.2f}" for tick in ax.get_xticks()])
+
+    ax.grid(True)
+    fig.savefig(job.fn('d_from_floor.png'), dpi=300, bbox_inches='tight', facecolor='white')
     plt.close()
 
     #############################################
-    # Displacement and total distance
+    ## Displacement and total distance travelled
     #############################################
-    
+
+    n_frames, n_rods, _ = active_com_positions.shape
+
+    # Initial positions per rod
+    active_init_pos = active_com_positions[0]  # shape (n_rods, 3)
+
+    # Storage arrays
+    disp_active = np.zeros((n_frames, n_rods))        # displacement from initial pos
+    active_total_distances = np.zeros((n_frames, n_rods))  # cumulative distance travelled
+
+    # Total distance accumulator per rod
+    total_distance_per_rod = np.zeros(n_rods)
+
+    # Compute per-frame displacement and cumulative distance
+    for t in range(1, n_frames):
+        # Displacement from initial position
+        disp = active_com_positions[t] - active_init_pos
+        disp_active[t] = np.linalg.norm(disp, axis=1)
+
+        # Incremental displacement between frames
+        vector = active_com_positions[t] - active_com_positions[t-1]
+        step_dist = np.linalg.norm(vector, axis=1)
+        total_distance_per_rod += step_dist
+        active_total_distances[t] = total_distance_per_rod
+
+    print("Displacement calculated.")
+
+    # Convert to experimental units (um)
     disp_active_um = disp_active * len_conv_um
     active_total_distances_um = active_total_distances * len_conv_um
-    mean_disp_um = disp_active_um.mean(axis=1)
+
+    # Mean distance across rods
     mean_total_distance_um = active_total_distances_um.mean(axis=1)
     std_total_distance_um = active_total_distances_um.std(axis=1)
 
-    fig, ax = plt.subplots(figsize=(10,6))
-    ax.plot(timesteps, mean_total_distance_um, color='blue', label='Mean total distance')
-    ax.fill_between(timesteps, mean_total_distance_um-std_total_distance_um,
-                    mean_total_distance_um+std_total_distance_um, color='blue', alpha=0.2)
-    ax.set_xlabel("Simulation Timesteps")
-    ax.set_ylabel("Total Distance (um)")
+    fig, ax = plt.subplots(figsize=(10, 6))
+    ax.set_facecolor('white')
+
+    # Plot mean +/1 std
+    ax.plot(timesteps, mean_total_distance_um, color='blue', label='Active rods (mean)')
+    ax.fill_between(timesteps,
+                    mean_total_distance_um - std_total_distance_um,
+                    mean_total_distance_um + std_total_distance_um,
+                    color='blue', alpha=0.2, label='±1 stdev')
+
+    ax.set_xlim(left=0, right=max(timesteps))
+    ax.set_ylim(bottom=0)
+    ax.set_xlabel("Simulation Timestep")
+    ax.set_ylabel(r"Total Distance Travelled ($\mu$m)")
+
+    # Experimental time axis
+    ax2 = ax.twiny()
+    ax2.set_xlabel("Time (sec)")
+    ax2.set_xticks(ax.get_xticks())
+    ax2.set_xticklabels([f"{tick * step_to_sec:.2f}" for tick in ax.get_xticks()])
+
+    ax.legend(loc='best')
+    ax.set_title("Total Distance Travelled by Active Rods")
     ax.grid(True)
+
+    fig.savefig(job.fn('total_dist.png'), dpi=300, bbox_inches='tight', facecolor='white')
+    plt.close()
+
+    print("Total distance plot saved.")
+    
+    # Linear regression
+    slope_active, intercept_active, r_value_active, p_value_active, std_err_active = linregress(
+        timesteps_exp, mean_total_distance_um
+    )
+    r_squared_active = r_value_active ** 2
+
+    # Plot with slope annotation
+    fig, ax = plt.subplots(figsize=(10, 6))
+    ax.set_facecolor('white')
+
+    ax.plot(timesteps, mean_total_distance_um, label="Active rods (mean)", color='blue', alpha=0.8)
+    ax.set_xlim(left=0, right=max(timesteps))
+    ax.set_ylim(bottom=0, top=max(mean_total_distance_um))
+
+    # Annotate slope, R^2, and std error
+    ax.text(
+        0.05, 0.95,
+        f"Slope (Active rods): {slope_active:.2e}" + r" ($\mu$m/sec)" +
+        f"\nR²: {r_squared_active:.2f}\nStd Err: {std_err_active:.2e}",
+        transform=ax.transAxes,
+        fontsize=12,
+        verticalalignment='top',
+        color='blue'
+    )
+
+    # Twin x-axis for experimental time
     ax3 = ax.twiny()
     ax3.set_xlabel("Time (sec)")
     ax3.set_xticks(ax.get_xticks())
-    ax3.set_xticklabels([f"{tick*step_to_sec:.2f}" for tick in ax.get_xticks()])
-    fig.savefig(job.fn('total_dist.png'), dpi=300, bbox_inches='tight')
+    ax3.set_xticklabels([f"{tick * step_to_sec:.2f}" for tick in ax.get_xticks()])
+
+    ax.set_xlabel("Simulation Timesteps")
+    ax.set_ylabel(r"Total Distance Travelled ($\mu$m)")
+    ax.legend(loc='best')
+    ax.set_title("Total Distance Travelled During Simulation (Linear Fit)")
+    ax.grid(True)
+
+    fig.savefig(job.fn('total_dist_Wslopes.png'), dpi=300, bbox_inches='tight', facecolor='white')
     plt.close()
 
-    # Linear regression
-    slope, intercept, r_value, p_value, std_err = linregress(timesteps_exp, mean_total_distance_um)
-    r_squared = r_value**2
-
-    #############################################
-    # Save JSON with new metrics
-    #############################################
+    print("Total distance with regression slope plotted.")
     
-    all_data = {"jobid": job.id}; all_data.update(job.sp)
-    analysis_data = {
-        "active_net_distance_um": float(mean_disp_um[-1]),
-        "active_total_distance_um": float(mean_total_distance_um[-1]),
-        "slope_dist_active_um_per_sec": float(slope),
-        "slope_err_dist_active_um_per_sec": float(std_err),
-        "r_squared_active": float(r_squared),
-        "racf": racf.tolist(),
-        "phi": phi.tolist(),
-        "theta": theta.tolist(),
-        "phi_fft": phi_fft.tolist(),
-        "theta_fft": theta_fft.tolist(),
-        "acf": acf.tolist(),
-        "acf_fft": acf_fft.tolist()
+    # Use mean displacement across all rods
+    mean_disp_um = disp_active_um.mean(axis=1)
+    std_disp_um = disp_active_um.std(axis=1)
+
+    fig, ax = plt.subplots(figsize=(10, 6))
+    ax.set_facecolor('white')
+
+    # Plot mean +/- std
+    ax.plot(timesteps, mean_disp_um, color='blue', label='Active rods (mean)')
+    ax.fill_between(timesteps,
+                    mean_disp_um - std_disp_um,
+                    mean_disp_um + std_disp_um,
+                    color='blue', alpha=0.2, label='±1 std')
+
+    ax.set_xlabel("Simulation Timesteps")
+    ax.set_ylabel(r"Displacement from Starting Position ($\mu$m)")
+    ax.set_xlim(left=0, right=max(timesteps))
+    ax.set_ylim(bottom=0, top=max(mean_disp_um))
+
+    # Twin x-axis for experimental time
+    ax3 = ax.twiny()
+    ax3.set_xlabel("Time (sec)")
+    ax3.set_xticks(ax.get_xticks())
+    ax3.set_xticklabels([f"{tick * step_to_sec:.2f}" for tick in ax.get_xticks()])
+
+    ax.legend(loc='best')
+    ax.set_title("Center of Mass Displacement During Simulation")
+    ax.grid(True)
+
+    fig.savefig(job.fn('displacements.png'), dpi=300, bbox_inches='tight', facecolor='white')
+    plt.close()
+
+    print('Displacement plotted.')
+        
+    all_data = {
+        "jobid": job.id,
     }
+    statepoints = job.sp
+    all_data.update(statepoints)
+
+    analysis_data = {
+        "active_net_distance_um": float(mean_disp_um[-1]),  # mean net displacement at final frame
+        "active_total_distance_um": float(active_total_distances_um.mean(axis=1)[-1]),  # mean total distance
+        "slope_dist_active_um_per_sec": float(slope_active),  # linear regression slope
+        "slope_err_dist_active_um_per_sec": float(std_err_active),  # regression std err
+        "r_squared_active": float(r_squared_active),
+    }
+
     all_data.update(analysis_data)
 
-    with open(job.fn('analysis_active_only.json'), 'w') as f:
-        json.dump(all_data, f, indent=4)
+    # Save both files
+    for fn in ['analysis_data.json', 'signac_job_document.json']:
+        with open(job.fn(fn), 'w') as f:
+            json.dump(all_data, f, indent=4)
 
-    print("Analysis complete. JSON and plots saved.")
-
+    print('Analysis complete.')
 
 def Analysis(*jobs):
     
