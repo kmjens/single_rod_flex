@@ -14,12 +14,14 @@ modules = [
 
 class MyDashboard(Dashboard):
     def job_title(self, job):
-        if int(job.sp["num_flattener"]) > 0:
-            title_str = "Flat"
+        if int(job.sp["active_angle"]) == 0:
+            title_str = "End Coated"
+        elif int(job.sp["active_angle"]) == 90:
+            title_str = "Side Coated"
         else:
-            title_str = "Rounded"
+            title_str = "Angle Coated"
         
-        return "{}, Aspect Ratio = {}, v0 = {}, Freedom Ratio = {}".format(title_str, job.sp["aspect_rat"], job.sp["v0"], job.sp["freedom_rat"])
+        return "{}, Confinement = {}, torque mag = {}, wall_R = {}".format(title_str, job.sp["confinement"], job.sp["torque_mag"], job.sp["wall_R"])
         
 
 if __name__ == "__main__":

@@ -281,10 +281,10 @@ def Run_implementation(job, communicator):
         langevin.gamma_r.default = gamma_r
         integrator.methods.append(langevin)
     
-        langevin_mesh = hoomd.md.methods.Langevin(filter=filter_mesh, kT=SP.kT)
-        langevin_mesh.gamma.default = mesh_gamma
-        langevin_mesh.gamma_r.default = mesh_gamma_r
-        integrator.methods.append(langevin_mesh)
+        #langevin_mesh = hoomd.md.methods.Langevin(filter=filter_mesh, kT=SP.kT)
+        #langevin_mesh.gamma.default = mesh_gamma
+        #langevin_mesh.gamma_r.default = mesh_gamma_r
+        #integrator.methods.append(langevin_mesh)
     
     #############################################
     ## Add potentials
@@ -374,7 +374,7 @@ def Run_implementation(job, communicator):
                         trigger = hoomd.trigger.Periodic(100),
                         mesh=mesh_obj,
                         kT=SP.kT,
-                        forces=[mesh_bond_potential, helfrich_potential])
+                        forces=[mesh_bond_potential, helfrich_potential, area_potential])
 
         sim.operations.updaters.append(mesh_updater)
 
@@ -394,8 +394,34 @@ def Run_implementation(job, communicator):
     snap = sim.state.get_snapshot()
     print('after potentials:', snap.particles.diameter)
 
-    # GSD logger:
-    logger = hoomd.logging.Logger(['particle','constraint'])
+    ## GSD logger:
+    thermodynamic_properties = hoomd.md.compute.ThermodynamicQuantities(
+        filter=hoomd.filter.All()
+    )
+    sim.operations.computes.append(thermodynamic_properties)
+    
+    logger = hoomd.logging.Logger(['particle','constraint','scalar','sequence'])
+    logger.add(thermodynamic_properties, quantities=['potential_energy', 'kinetic_energy'])
+    logger.add(sim, quantities=['timestep','tps','walltime'])
+
+    #Add mesh info
+    logger.add(mesh_obj, quantities=['bonds'])
+    #logger.add(mesh_obj, quantities=['triangulation','types','triangles','type_ids'])
+    # ^^^ having issues logging these even tho I've seen on hoomd docs
+
+    # mesh forces
+    '''
+    logger.add(mesh_bond_potential, quantities=['energy'])
+    logger.add(helfrich_potential, quantities=['energy'])
+    logger.add(area_potential, quantities=['energy'])
+
+    # LJ energy
+    logger.add(wlj, quantities=['energy'])
+    logger.add(ExpLJ, quantities=['energy'])
+    '''
+    for force in [mesh_bond_potential, helfrich_potential, area_potential, wlj, ExpLJ]:
+        logger.add(force, quantities=['energy'])
+
     gsd_oper = hoomd.write.GSD(trigger=hoomd.trigger.Periodic(int(10000)), #int(2000)
                                filename=job.fn('Initialize.gsd'),
                                logger=logger, mode='wb',
