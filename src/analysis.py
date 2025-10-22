@@ -147,6 +147,7 @@ def Analysis_implementation(job, communicator):
     acf = quaternion_acf(active_com_orientation)
     acf_fft = fft(acf)
 
+    
     #############################################
     # Save per-rod trajectory to HDF5
     #############################################

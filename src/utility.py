@@ -1,6 +1,7 @@
 import json
 import matplotlib
 import os
+import glob
 import signac
 
 import numpy as np
@@ -8,6 +9,8 @@ import matplotlib.pyplot as plt
 import pandas as pd
 import seaborn as sns
 
+from scipy.fft import fft
+from scipy.spatial.transform import Rotation as Rot
 from itertools import combinations
 from collections import defaultdict
 
@@ -419,4 +422,88 @@ def find_mesh_radius_avg_and_std(sim):
     STDrad = np.std(rad)
     return AVGrad, STDrad
 
+
+def matplotlib_to_plotly(cmap, pl_entries=255):
+    cmap = matplotlib.cm.get_cmap(cmap, pl_entries)
+    colorscale = []
+    for k in range(cmap.N):
+        rgb = cmap(k)[:3]
+        colorscale.append([k / (cmap.N - 1), f'rgb({int(rgb[0]*255)}, {int(rgb[1]*255)}, {int(rgb[2]*255)})'])
+    return colorscale
+
+
+def get_unit_sphere():
+    u = np.linspace(0, 2 * np.pi, 50)
+    v = np.linspace(0, np.pi, 50)
+    sphere_x = np.outer(np.cos(u), np.sin(v))
+    sphere_y = np.outer(np.sin(u), np.sin(v))
+    sphere_z = np.outer(np.ones_like(u), np.cos(v))
+    return sphere_x, sphere_y, sphere_z
+
+
+def plot_solid_angle_dist(orientations):
+    """
+    orientations: shape (n_vectors, 3)
+    Returns: x_grid, y_grid, z_grid, solid_angle_distribution
+    """
+    norms = np.linalg.norm(orientations, axis=1)
+    normalized_orientations = orientations / norms[:, None]
+
+    phi = np.arctan2(normalized_orientations[:, 1], normalized_orientations[:, 0])
+    theta = np.arccos(normalized_orientations[:, 2])
+
+    phi_edges = np.linspace(-np.pi, np.pi, 30)
+    theta_edges = np.linspace(0, np.pi, 15)
+    hist, phi_edges, theta_edges = np.histogram2d(phi, theta, bins=[phi_edges, theta_edges])
+    hist = hist / np.sum(hist)
+
+    dphi = phi_edges[1] - phi_edges[0]
+    dtheta = theta_edges[1] - theta_edges[0]
+    solid_angle = np.sin(theta_edges[:-1]) * dtheta * dphi
+    solid_angle = np.outer(np.ones(len(phi_edges) - 1), solid_angle)
+    solid_angle_distribution = hist * solid_angle
+
+    phi_grid, theta_grid = np.meshgrid(phi_edges[:-1], theta_edges[:-1])
+    x_grid = np.sin(theta_grid) * np.cos(phi_grid)
+    y_grid = np.sin(theta_grid) * np.sin(phi_grid)
+    z_grid = np.cos(theta_grid)
+
+    return x_grid, y_grid, z_grid, solid_angle_distribution
+
+
+def quaternion_acf(orientations):
+    """
+    Compute autocorrelation function of quaternions.
+    orientations: shape (n_frames, 4)
+    """
+    num_frames = len(orientations)
+    acf = np.zeros(num_frames)
+    orientations = np.array([q / np.linalg.norm(q) for q in orientations])
+
+    for tau in range(num_frames):
+        dot_products = [np.dot(orientations[t], orientations[t + tau]) for t in range(num_frames - tau)]
+        acf[tau] = np.mean(dot_products)
+
+    return acf
+
+
+def extract_FFT_data(fft_data, freq_data):
+    pos_mask = freq_data > 0
+    pos_freq = freq_data[pos_mask]
+    fft_mag = np.abs(fft_data[pos_mask])
+
+    max_idx = np.argmax(fft_mag)
+    max_amp = fft_mag[max_idx]
+    max_freq = pos_freq[max_idx]
+
+    return {'max_amp': max_amp, 'max_freq': max_freq}
+
+
+def clean_analysis_files(job):
+    path_dir = os.path.dirname(job.fn('Demo.gsd'))
+    for ext in ['*.png', '*.html']:
+        files = glob.glob(os.path.join(path_dir, ext))
+        for file in files:
+            os.remove(file)
+        print(f"Deleted all {ext} files in directory: {path_dir}")
 
