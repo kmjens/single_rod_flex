@@ -171,9 +171,7 @@ def Run_implementation(job, communicator):
     const_pos_list = bead_pos_list + flattener_pos_list 
     const_orient_list = bead_orient_list +flattener_orient_list 
 
-
     assert len(const_type_list) == len(const_pos_list) == len(const_orient_list)
-
 
     # Create rigid body objects
     rigid = hoomd.md.constrain.Rigid()
