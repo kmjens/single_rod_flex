@@ -537,6 +537,10 @@ def analyze_orientation_series(orientations, timesteps, label, job):
 
     return fft_orient_phi_data, fft_orient_theta_data, fft_acf_data
 
+def savefig_and_close(fig, job, fname):
+    fig.savefig(job.fn(fname), dpi=300, bbox_inches='tight', facecolor='white')
+    plt.close(fig)
+
 
 def clean_analysis_files(job):
     path_dir = os.path.dirname(job.fn('Demo.gsd'))

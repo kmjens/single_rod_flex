@@ -205,7 +205,7 @@ def plot_autocorrelation_function_FFT(timesteps_exp, acf, acf_fft, freq, fft_xli
     fig.savefig(job.fn('FFT_active_rod_orient_autocorr.png'), dpi=300, bbox_inches='tight', facecolor='white')
     plt.close()
 
-def plot_contrasted_active_angular_dist(active_normalized_v, directions, cmap, job):
+def plot_contrasted_active_angular_dist(active_normalized_v, directions, cmap, job, filename_suffix):
     nbins = 50
 
     # Normalize on xy plane
@@ -231,7 +231,7 @@ def plot_contrasted_active_angular_dist(active_normalized_v, directions, cmap, j
     ax.set_ylabel('Polar Angle (theta)')
     ax.set_title('Probability Distribution of Active Particle Orientation Angle\n(Normalized for Extra Contrast)')
     
-    fig.savefig(job.fn('extra_contrast_2D_orient_dist.png'), dpi=300, bbox_inches='tight', facecolor='white')
+    fig.savefig(job.fn(f'extra_contrast_2D_orient_dist_{filename_suffix}.png'), dpi=300, bbox_inches='tight', facecolor='white')
     plt.close()
 
 def plot_orientation_on_S2_for_active(phi,theta,job):
