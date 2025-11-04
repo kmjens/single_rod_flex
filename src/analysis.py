@@ -119,7 +119,7 @@ def Analysis_implementation(job, communicator):
 
     # Rotational Autocorrelation stuff
     #3 because I calculate it for l = 2,4,6 to get diff symmetry orders
-    racf = np.empty((num_frames, n_active 3), dtype=complex)
+    racf = np.empty((num_frames, n_active, 3), dtype=complex)
     previous_ori = 'FALSE'
 
     # Loop through trajectory
