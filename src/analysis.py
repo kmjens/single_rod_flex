@@ -55,348 +55,190 @@ def Analysis_implementation(job, communicator):
     
 
     #############################################
-    ## Collect positions and orientations from GSD
+    ## Load GSD trajectory
     #############################################
-
     f = gsd.pygsd.GSDFile(open(job.fn('Run.gsd'), 'rb'))
     traj = gsd.hoomd.HOOMDTrajectory(f)
-    initial_frame = traj[0]
-
     num_frames = len(traj)
-    box = initial_frame.configuration.box
-    box_instance = freud.box.Box(Lx=box[0], Ly=box[1], Lz=box[2], xy=box[3], xz=box[4], yz=box[5])
-
-    time_indices = np.arange(len(traj))
-    timesteps = time_indices * 10000
-    timesteps_exp = timesteps * step_to_sec
-
-    # Set up for ffts:
-    freq = fftfreq(len(timesteps_exp), d=(timesteps_exp[1] - timesteps_exp[0]))  # Frequency values
-    fft_xlim_max = timesteps_exp[-1]/5
-
-    # Identify type indices
+    
+    initial_frame = traj[0]
     typeid_array = initial_frame.particles.typeid
     active_indices = np.where(typeid_array == 0)[0]
     n_active = len(active_indices)
+    particle_indices = list(range(min(5, n_active)))  # first 5 particles for plotting
     
-    # Determine number of particles to analyze individually
-    n_particles_to_plot = min(5, n_active)
-    particle_indices = list(range(n_particles_to_plot))
-
-    # Translational quantities (per particle)
-    active_positions     = np.empty((num_frames, n_active, 3), dtype=float)
-    active_images        = np.empty((num_frames, n_active, 3), dtype=float)
-    active_unwrapped     = np.empty((num_frames, n_active, 3), dtype=float)
-    active_velocity      = np.empty((num_frames, n_active, 3), dtype=float)
-    active_orientation   = np.empty((num_frames, n_active, 4), dtype=float)
-
-    # Per-particle displacement and distance tracking
-    active_displacements = np.zeros((num_frames, n_active), dtype=float)
-    active_total_distances = np.zeros((num_frames, n_active), dtype=float)
-
-    # Per-particle rotational autocorrelation (for l = 2,4,6)
-    active_racf = np.zeros((num_frames, n_active, 3), dtype=complex)
-
+    box = initial_frame.configuration.box
+    box_instance = freud.box.Box(Lx=box[0], Ly=box[1], Lz=box[2],
+                                 xy=box[3], xz=box[4], yz=box[5])
+    
+    timesteps = np.arange(num_frames) * 10000
+    timesteps_exp = timesteps * step_to_sec
+    freq = fftfreq(num_frames, d=(timesteps_exp[1] - timesteps_exp[0]))
+    fft_xlim_max = timesteps_exp[-1]/5
+    
+    #############################################
+    ## Allocate arrays
+    #############################################
+    # Per-particle quantities
+    active_positions   = np.empty((num_frames, n_active, 3))
+    active_unwrapped   = np.empty((num_frames, n_active, 3))
+    active_velocity    = np.empty((num_frames, n_active, 3))
+    active_orientation = np.empty((num_frames, n_active, 4))
+    
+    active_displacements    = np.zeros((num_frames, n_active))
+    active_total_distances  = np.zeros((num_frames, n_active))
+    active_racf             = np.zeros((num_frames, n_active, 3), dtype=complex)
+    
     # COM quantities
-    active_com_unwrapped   = np.empty((num_frames, 3), dtype=float)
-    active_com_velocity    = np.empty((num_frames, 3), dtype=float)
-    active_com_v_norms     = np.empty((num_frames, 1), dtype=float)
-    active_normalized_v    = np.empty((num_frames, 3), dtype=float)
-    active_com_orientation = np.empty((num_frames, 4), dtype=float)
-    com_racf               = np.zeros((num_frames, 3), dtype=complex)
-
-    # Displacement tracking for COM
-    disp_active_com = np.zeros(num_frames, dtype=float)
-    total_distance_com = np.zeros(num_frames, dtype=float)
-
-    previous_ori = False
-    previous_com_ori = False
-
-    cmap_blue = plt.get_cmap('Blues')
-    norm = plt.Normalize(vmin=timesteps.min(), vmax=timesteps.max())
-
-    # Initialize variables for displacement and distance calculations
-    active_total_distance = 0
-
-    disp_active = [0]  # Starting displacement is 0
-    active_total_distances = [0]
-
-    # Rotational Autocorrelation stuff
-    #3 because I calculate it for l = 2,4,6 to get diff symmetry orders
-    racf = np.empty((num_frames, n_active, 3), dtype=complex)
-    previous_ori = False
-    previous_com_ori = False
+    com_positions        = np.empty((num_frames, 3))
+    com_velocity         = np.empty((num_frames, 3))
+    com_v_norms          = np.empty(num_frames)
+    com_normalized_v     = np.empty((num_frames, 3))
+    com_orientation      = np.empty((num_frames, 4))
+    com_racf             = np.zeros((num_frames, 3), dtype=complex)
     
-   # Loop over trajectory frames
+    # Temporary variables
+    prev_ori = None
+    prev_com_ori = None
+    
+    #############################################
+    ## Loop over trajectory frames
+    #############################################
     for i, frame in enumerate(traj):
-        pos = frame.particles.position
-        img = frame.particles.image
-        tid = frame.particles.typeid
-        vel = frame.particles.velocity
-        ori = frame.particles.orientation
-
-        active_mask = (tid == 0)
-        active_pos  = pos[active_mask]
-        active_img  = img[active_mask]
-        active_vel  = vel[active_mask]
-        active_ori  = ori[active_mask]
-
-        # Store per-particle quantities
-        active_positions[i]   = active_pos
-        active_images[i]      = active_img
-        active_unwrapped[i]   = box_instance.unwrap(active_pos, active_img)
-        active_velocity[i]    = active_vel
-        active_orientation[i] = active_ori
-
-        # COM quantities
-        active_com_unwrapped[i] = np.mean(active_unwrapped[i], axis=0)
-        active_com_velocity[i]  = np.mean(active_vel, axis=0)
-        active_com_v_norms[i]   = np.linalg.norm(active_com_velocity[i])
-        active_normalized_v[i]  = active_com_velocity[i] / active_com_v_norms[i]
-
+        pos = frame.particles.position[active_indices]
+        img = frame.particles.image[active_indices]
+        vel = frame.particles.velocity[active_indices]
+        ori = frame.particles.orientation[active_indices]
+        
+        # Store per-particle data
+        active_positions[i]   = pos
+        active_unwrapped[i]   = box_instance.unwrap(pos, img)
+        active_velocity[i]    = vel
+        active_orientation[i] = ori
+        
+        # Compute COM
+        com_positions[i] = np.mean(active_unwrapped[i], axis=0)
+        com_velocity[i]  = np.mean(vel, axis=0)
+        com_v_norms[i]   = np.linalg.norm(com_velocity[i])
+        com_normalized_v[i] = com_velocity[i] / com_v_norms[i] if com_v_norms[i] > 0 else np.zeros(3)
+        
         if n_active > 1:
-            mean_rot = Rot.from_quat(active_ori).mean()
-            active_com_orientation[i] = mean_rot.as_quat()
+            com_orientation[i] = Rot.from_quat(ori).mean().as_quat()
         else:
-            active_com_orientation[i] = active_ori[0]
-
-        # Displacement & total distance
+            com_orientation[i] = ori[0]
+        
+        # Displacements & total distances
         if i > 0:
-            step_vectors = active_unwrapped[i] - active_unwrapped[i - 1]
+            step_vectors = active_unwrapped[i] - active_unwrapped[i-1]
             step_lengths = np.linalg.norm(step_vectors, axis=1)
-            active_total_distances[i] = active_total_distances[i - 1] + step_lengths
-            active_displacements[i] = np.linalg.norm(active_unwrapped[i] - active_unwrapped[0], axis=1)
-
-            step_vector_com = active_com_unwrapped[i] - active_com_unwrapped[i - 1]
-            total_distance_com[i] = total_distance_com[i - 1] + np.linalg.norm(step_vector_com)
-            disp_active_com[i] = np.linalg.norm(active_com_unwrapped[i] - active_com_unwrapped[0])
-
+            active_total_distances[i] = active_total_distances[i-1] + step_lengths
+            active_displacements[i]   = np.linalg.norm(active_unwrapped[i] - active_unwrapped[0], axis=1)
+            
+            com_step = com_positions[i] - com_positions[i-1]
+            com_racf_step = np.linalg.norm(com_step)
+        
         # Rotational autocorrelation
-        active_ori /= np.linalg.norm(active_ori, axis=1, keepdims=True)
-        com_ori = active_com_orientation[i].reshape(1, 4)
-
-        for j, l in enumerate([2, 4, 6]):
+        ori_normed = ori / np.linalg.norm(ori, axis=1, keepdims=True)
+        com_ori_reshaped = com_orientation[i].reshape(1,4)
+        
+        for j, l in enumerate([2,4,6]):
             rot_auto = freud.order.RotationalAutocorrelation(l)
-            if previous_ori:
-                rot_auto.compute(ref_orientations=prev_ori, orientations=active_ori)
-                active_racf[i, :, j] = rot_auto.particle_order
-            if previous_com_ori:
-                rot_auto.compute(ref_orientations=prev_com_ori, orientations=com_ori)
-                com_racf[i, j] = rot_auto.particle_order
-
-        prev_ori = active_ori.copy()
-        prev_com_ori = com_ori.copy()
-        previous_ori = True
-        previous_com_ori = True
-
-    active_init_pos = active_com_unwrapped[0]
-    disp_active = np.array(disp_active)
-    active_total_distances = np.array(active_total_distances)
-
-    print("Finished processing active particle COM positions, velocities, orientations, displacements, and total distances.")
-
-
-    #############################################
-    # Velocity Analysis & FFT
-    #############################################
-    cmap_blue = plt.get_cmap('Blues')
-    cmap_red = plt.get_cmap('Reds')
-    norm_t = plt.Normalize(vmin=timesteps.min(), vmax=timesteps.max())
-    
-    ## Velocity-related plots
-    # COM Velocity
-    plot_COM_velocity(timesteps, active_com_v_norms, speed_conv_mm, step_to_sec, job)
-    active_v_fft = fft(active_com_v_norms)
-    fft_active_com_v_data  = extract_FFT_data(active_v_fft, freq)
-    plot_COM_velocity_FFT(freq, active_com_v_norms,fft_xlim_max, job)
-
-    # Individual particles
-    for pid in particle_indices:
-        particle_speed = np.linalg.norm(active_velocity[:, pid, :], axis=0)
-        plot_COM_velocity(timesteps, particle_speed, speed_conv_mm, step_to_sec, job, label=f"Particle_{pid}")
-
-        # FFT for this particle
-        particle_v_fft = fft(particle_speed)
-        fft_particle_data = extract_FFT_data(particle_v_fft, freq)
-        plot_COM_velocity_FFT(freq, particle_speed, fft_xlim_max, job, label=f"Particle_{pid}")
+            if prev_ori is not None:
+                rot_auto.compute(ref_orientations=prev_ori, orientations=ori_normed)
+                active_racf[i,:,j] = rot_auto.particle_order
+            if prev_com_ori is not None:
+                rot_auto.compute(ref_orientations=prev_com_ori, orientations=com_ori_reshaped)
+                com_racf[i,j] = rot_auto.particle_order
+        
+        prev_ori = ori_normed.copy()
+        prev_com_ori = com_ori_reshaped.copy()
     
     #############################################
-    # Angular distributions of velocity and orientation
+    ## Displacements & FFTs
     #############################################
-
-    # COM first
-    plot_contrasted_active_angular_dist(
-        active_normalized_v,
-        active_com_orientation,
-        cmap_blue,
-        job,
-        filename_suffix='COM'
-    )
-    plot_v_distrib_on_S2(active_normalized_v, job, filename_suffix='COM')
-    plot_2D_w_1D_velocoity_hist(
-        active_normalized_v,
-        'Distribution of COM Velocity Direction',
-        plt.cm.Blues,
-        job,
-        filename_suffix='COM'
-    )
-
-    # Individual particles
-    for pid in particle_indices:
-        # Normalize particle velocity
-        particle_v_norm = np.linalg.norm(active_velocity[:, pid, :], axis=1)
-        particle_normalized_v = active_velocity[:, pid, :] / particle_v_norm[:, np.newaxis]
-
-        particle_orientation = active_orientation[:, pid, :]
-
-        # Plot angular distributions for this particle
-        plot_contrasted_active_angular_dist(
-            particle_normalized_v,
-            particle_orientation,
-            cmap_blue,
-            job,
-            filename_suffix=f'Particle_{pid}'
-        )
-        plot_v_distrib_on_S2(particle_normalized_v, job, filename_suffix=f'Particle_{pid}')
-        plot_2D_w_1D_velocoity_hist(
-            particle_normalized_v,
-            f'Distribution of Particle {pid} Velocity Direction',
-            plt.cm.Blues,
-            job,
-            filename_suffix=f'Particle_{pid}'
-        )
-
-    #############################
-    # Displacements & Total Distance
-    #############################
     # COM
-    disp_active_com_um = disp_active_com * len_conv_um
-    total_distance_com_um = total_distance_com * len_conv_um
-
-    # Individual particles
-    disp_active_um = active_displacements * len_conv_um
-    total_distance_um = active_total_distances * len_conv_um
-   
-    ##########################################################
-    # Orientation Analysis (COM and per particle)
-    ##########################################################
-
-    # COM orientation analysis and plots
-    fft_com_phi, fft_com_theta, fft_com_acf = analyze_orientation_series(
-        active_com_orientation,
-        timesteps,
-        "COM",
-        job
-    )
-
-    # Per-particle orientation analysis and plots
-    for rod_id in [0, 1, 2, 3, 4]:
-        analyze_orientation_series(
-            active_particle_orientation[:, rod_id],
-            timesteps,
-            f"Particle_{rod_id}",
-            job
+    disp_com_um = np.linalg.norm(com_positions - com_positions[0], axis=1) * len_conv_um
+    total_dist_com_um = np.zeros(num_frames)
+    for i in range(1,num_frames):
+        total_dist_com_um[i] = total_dist_com_um[i-1] + np.linalg.norm(com_positions[i]-com_positions[i-1]) * len_conv_um
+    
+    # Per-particle
+    disp_particles_um = np.linalg.norm(active_unwrapped - active_unwrapped[0], axis=2) * len_conv_um
+    total_dist_particles_um = np.zeros_like(disp_particles_um)
+    for i in range(1,num_frames):
+        total_dist_particles_um[i] = total_dist_particles_um[i-1] + np.linalg.norm(active_unwrapped[i]-active_unwrapped[i-1], axis=1) * len_conv_um
     
     #############################################
-    ## Plot and save x-y plane trajectories
+    ## Plot first 5 particles + COM
     #############################################
-
-    # COM first
-    fig, ax = plt.subplots(figsize=(6,4))
-    ax.plot(active_com_unwrapped[:,0]*len_conv_um,
-            active_com_unwrapped[:,1]*len_conv_um,
-            color='blue', label='COM')
-    ax.set_xlabel("X (um)")
-    ax.set_ylabel("Y (um)")
-    ax.set_title("XY trajectory (COM)")
-    ax.axis('equal')
-    ax.grid(True)
-    plt.show()
-    fig.savefig(job.fn(f'xy_traj_particle_COM.png'), dpi=150, bbox_inches='tight', facecolor='white')
-    plt.close()
-
-    # Individual particles
     for pid in particle_indices:
-        fig, ax = plt.subplots(figsize=(6,4))
-        ax.plot(active_unwrapped[:,pid,0]*len_conv_um,
-                active_unwrapped[:,pid,1]*len_conv_um,
-                label=f"Particle_{pid}")
-        ax.set_xlabel("X (um)")
-        ax.set_ylabel("Y (um)")
-        ax.set_title(f"XY trajectory (Particle {pid})")
-        ax.axis('equal')
+        fig, ax = plt.subplots()
+        ax.plot(timesteps_exp, disp_particles_um[:,pid], label=f'Particle {pid} Displacement')
+        ax.set_xlabel("Time (s)")
+        ax.set_ylabel("Displacement (um)")
         ax.grid(True)
-        plt.show()
-        fig.savefig(job.fn(f'xy_traj_particle_{rod_id}.png'), dpi=150, bbox_inches='tight', facecolor='white')
+        fig.savefig(job.fn(f'displacement_particle_{pid}.png'), dpi=150)
         plt.close()
     
-    print('XY Trajectories plotted.')
-
-    #############################################
-    ## Z-Position Analysis
-    #############################################
-
-    active_z_exp = []
-    for i in range(len(active_z)):
-        active_z_exp.append((active_z[i]+R+1)*len_conv_um)
-    plot_z_position_data(active_z_exp, timesteps, step_to_sec, job)
-
-    # FFT of inner profuct signals
-    active_z_fft = fft(active_z_exp)
-    active_z_fft_data  = extract_FFT_data(active_z_fft, freq)
-    plot_z_position_FFT(freq, active_z_fft, fft_xlim_max, job)
-
-
-    #############################################
-    # Displacement & Total Distance
-    #############################################
-    # COM
+    # COM plot
     fig, ax = plt.subplots()
-    ax.plot(timesteps, disp_active_com*len_conv_um, label='COM Displacement')
-    ax.set_xlabel("Timesteps")
+    ax.plot(timesteps_exp, disp_com_um, label='COM Displacement', color='blue')
+    ax.set_xlabel("Time (s)")
     ax.set_ylabel("Displacement (um)")
-    ax.set_title("COM Displacement")
     ax.grid(True)
-    savefig_and_close(fig, job, "displacement_COM.png")
-
-    # Particles
-    for pid in particle_indices:
-        fig, ax = plt.subplots()
-        ax.plot(timesteps, active_displacements[:,pid]*len_conv_um, label=f"Particle {pid} Displacement")
-        ax.set_xlabel("Timesteps")
-        ax.set_ylabel("Displacement (um)")
-        ax.set_title(f"Displacement Particle {pid}")
-        ax.grid(True)
-        savefig_and_close(fig, job, f"displacement_Particle_{pid}.png")## Save to analysis
-
-    #############################################
-    # Displacement FFT
-    #############################################
-
-    # First, compute FFT of COM displacement
-    disp_com_fft = np.abs(fft(disp_active_com))[:len(disp_active_com)//2]
-    freqs = fftfreq(len(disp_active_com), step_to_sec)[:len(disp_active_com)//2]
-
-    fig, ax = plt.subplots()
-    ax.plot(freqs, disp_com_fft, label='COM FFT Magnitude')
-    ax.set_xlabel("Frequency (Hz)")
-    ax.set_ylabel("FFT Magnitude")
-    ax.set_title("COM Displacement FFT")
-    ax.grid(True)
-    savefig_and_close(fig, job, "fft_COM.png")
-
-
-    # Now per particle
-    for pid in particle_indices:
-        disp_fft = np.abs(fft(active_displacements[:, pid]))[:len(active_displacements)//2]
-        fig, ax = plt.subplots()
-        ax.plot(freqs, disp_fft, label=f"Particle {pid} FFT Magnitude")
-        ax.set_xlabel("Frequency (Hz)")
-        ax.set_ylabel("FFT Magnitude")
-        ax.set_title(f"Displacement FFT Particle {pid}")
-        ax.grid(True)
-        savefig_and_close(fig, job, f"fft_Particle_{pid}.png")
+    fig.savefig(job.fn(f'displacement_COM.png'), dpi=150)
+    plt.close()
     
+    #############################################
+    ## FFT example (COM)
+    #############################################
+    fft_com = np.abs(fft(disp_com_um))[:num_frames//2]
+    fft_freqs = fftfreq(num_frames, step_to_sec)[:num_frames//2]
+    fig, ax = plt.subplots()
+    ax.plot(fft_freqs, fft_com, label='COM FFT')
+    ax.set_xlabel("Frequency (Hz)")
+    ax.set_ylabel("Magnitude")
+    ax.grid(True)
+    fig.savefig(job.fn('fft_COM.png'), dpi=150)
+    plt.close()
+    
+    # Per-particle FFT
+    for pid in particle_indices:
+        fft_particle = np.abs(fft(disp_particles_um[:,pid]))[:num_frames//2]
+        fig, ax = plt.subplots()
+        ax.plot(fft_freqs, fft_particle, label=f'Particle {pid} FFT')
+        ax.set_xlabel("Frequency (Hz)")
+        ax.set_ylabel("Magnitude")
+        ax.grid(True)
+        fig.savefig(job.fn(f'fft_particle_{pid}.png'), dpi=150)
+        plt.close()
+    
+    #############################################
+    ## COM and per-particle trajectory XY plots
+    #############################################
+    fig, ax = plt.subplots()
+    ax.plot(com_positions[:,0]*len_conv_um, com_positions[:,1]*len_conv_um, label='COM', color='blue')
+    ax.set_xlabel("X (um)")
+    ax.set_ylabel("Y (um)")
+    ax.axis('equal')
+    ax.grid(True)
+    fig.savefig(job.fn('xy_traj_COM.png'), dpi=150)
+    plt.close()
+    
+    for pid in particle_indices:
+        fig, ax = plt.subplots()
+        ax.plot(active_unwrapped[:,pid,0]*len_conv_um,
+                active_unwrapped[:,pid,1]*len_conv_um,
+                label=f'Particle {pid}')
+        ax.set_xlabel("X (um)")
+        ax.set_ylabel("Y (um)")
+        ax.axis('equal')
+        ax.grid(True)
+        fig.savefig(job.fn(f'xy_traj_particle_{pid}.png'), dpi=150)
+        plt.close()
+    
+    print("Analysis complete for COM and first 5 particles.")
+
     #############################################
     ## Save results to json file
     #############################################
