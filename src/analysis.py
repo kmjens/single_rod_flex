@@ -238,41 +238,49 @@ def Analysis_implementation(job, communicator):
         plt.close()
     
     print("Analysis complete for COM and first 5 particles.")
-
+    
     #############################################
-    ## Save results to json file
+    ## Save results to JSON
     #############################################
 
     all_data = {
         "jobid": job.id,
     }
-    statepoints = job.sp
-    all_data.update(statepoints)
+    all_data.update(job.sp)
+
+    # Compute average displacement & total distance over all active particles
+    mean_disp_particles_um = np.mean(disp_particles_um, axis=1)        # mean over particles
+    mean_total_dist_particles_um = np.mean(total_dist_particles_um, axis=1)
 
     analysis_data = {
-        "active_net_distance_um": float(mean_disp_um[-1]),
-        "active_total_distance_um": float(mean_total_distance_um[-1]),
-        "slope_dist_active_um_per_sec": float(slope),
-        "slope_err_dist_active_um_per_sec": float(std_err),
-        "r_squared_active": float(r_squared),
-        "racf": racf.tolist(),
-        "phi": phi.tolist(),
-        "theta": theta.tolist(),
-        "phi_fft": phi_fft.tolist(),
-        "theta_fft": theta_fft.tolist(),
-        "acf": acf.tolist(),
-        "acf_fft": acf_fft.tolist()
+        # COM quantities
+        "com_net_displacement_um": float(disp_com_um[-1]),
+        "com_total_distance_um": float(total_dist_com_um[-1]),
 
+        # Average over all particles
+        "mean_particle_net_displacement_um": float(mean_disp_particles_um[-1]),
+        "mean_particle_total_distance_um": float(mean_total_dist_particles_um[-1]),
+
+        # Individual first 5 particle final displacements
+        "particle_net_displacement_um": disp_particles_um[-1, :5].tolist(),
+        "particle_total_distance_um": total_dist_particles_um[-1, :5].tolist(),
+
+        # You can also save RACF, orientations, FFTs
+        "racf_particles": active_racf.tolist(),
+        "racf_com": com_racf.tolist(),
+        "com_orientation": com_orientation.tolist(),
+        "particle_orientation": active_orientation.tolist()
     }
+
     all_data.update(analysis_data)
+
     with open(job.fn('analysis_data_wFFT.json'), 'w') as f:
         json.dump(all_data, f, indent=4)
 
     with open(job.fn('signac_job_document.json'), 'w') as f:
         json.dump(all_data, f, indent=4)
 
-    print('Analysis complete.')
-
+    print('Analysis complete and saved.')
 
 def Analysis(*jobs):
     
