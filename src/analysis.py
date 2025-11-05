@@ -373,25 +373,25 @@ def Analysis_implementation(job, communicator):
         "com_orientation": com_orientation.tolist(),
         
         # COM
-        "com_displacement_um": disp_com_um.tolist(),
-        "com_total_distance_um": total_dist_com_um.tolist(),
-        "com_MSD_um2": msd_com.tolist(),
+        #"com_displacement_um": disp_com_um.tolist(),
+        #"com_total_distance_um": total_dist_com_um.tolist(),
+        #"com_MSD_um2": msd_com.tolist(),
 
         # Per-particle
-        "disp_particles_um": disp_particles_um.tolist(),
+        #"disp_particles_um": disp_particles_um.tolist(),
         "total_dist_particles_um": total_dist_particles_um.tolist(),
-        "MSD_particles_um2": msd_particles.tolist(),
-        "MSD_particles_std_um2": msd_std_particles.tolist(),
+        #"MSD_particles_um2": msd_particles.tolist(),
+        #"MSD_particles_std_um2": msd_std_particles.tolist(),
 
         # First 5 particles final values
         "particle_net_displacement_um": disp_particles_um[-1,:5].tolist(),
         "particle_total_distance_um": total_dist_particles_um[-1,:5].tolist(),
 
         # Mean ± std
-        "mean_disp_particles_um": mean_disp_particles.tolist(),
-        "std_disp_particles_um": std_disp_particles.tolist(),
-        "mean_total_dist_particles_um": mean_total_dist_particles.tolist(),
-        "std_total_dist_particles_um": std_total_dist_particles.tolist()
+        #"mean_disp_particles_um": mean_disp_particles.tolist(),
+        #"std_disp_particles_um": std_disp_particles.tolist(),
+        #"mean_total_dist_particles_um": mean_total_dist_particles.tolist(),
+        #"std_total_dist_particles_um": std_total_dist_particles.tolist()
     }
 
     all_data.update(analysis_data)
