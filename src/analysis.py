@@ -154,41 +154,157 @@ def Analysis_implementation(job, communicator):
         prev_com_ori = com_ori_reshaped.copy()
     
     #############################################
-    ## Displacements & FFTs
+    ## Displacements, Total Distance & MSD
     #############################################
-    # COM
+
+    # Compute COM quantities
     disp_com_um = np.linalg.norm(com_positions - com_positions[0], axis=1) * len_conv_um
     total_dist_com_um = np.zeros(num_frames)
-    for i in range(1,num_frames):
-        total_dist_com_um[i] = total_dist_com_um[i-1] + np.linalg.norm(com_positions[i]-com_positions[i-1]) * len_conv_um
-    
-    # Per-particle
+    for i in range(1, num_frames):
+        total_dist_com_um[i] = total_dist_com_um[i-1] + np.linalg.norm(com_positions[i] - com_positions[i-1]) * len_conv_um
+
+    msd_com = np.cumsum(np.linalg.norm(com_positions - com_positions[0], axis=1)**2) * len_conv_um**2
+
+    # Per-particle quantities
     disp_particles_um = np.linalg.norm(active_unwrapped - active_unwrapped[0], axis=2) * len_conv_um
     total_dist_particles_um = np.zeros_like(disp_particles_um)
-    for i in range(1,num_frames):
-        total_dist_particles_um[i] = total_dist_particles_um[i-1] + np.linalg.norm(active_unwrapped[i]-active_unwrapped[i-1], axis=1) * len_conv_um
-    
+    for i in range(1, num_frames):
+        total_dist_particles_um[i] = total_dist_particles_um[i-1] + np.linalg.norm(active_unwrapped[i] - active_unwrapped[i-1], axis=1) * len_conv_um
+
+    msd_particles = np.mean(np.sum((active_unwrapped - active_unwrapped[0])**2, axis=2), axis=1)
+    msd_std_particles = np.std(np.sum((active_unwrapped - active_unwrapped[0])**2, axis=2), axis=1)
+
+    # Mean and std for displacement & total distance
+    mean_disp_particles = np.mean(disp_particles_um, axis=1)
+    std_disp_particles  = np.std(disp_particles_um, axis=1)
+    mean_total_dist_particles = np.mean(total_dist_particles_um, axis=1)
+    std_total_dist_particles  = np.std(total_dist_particles_um, axis=1)
+
+    # Colors for plotting
+    colors = plt.cm.viridis(np.linspace(0,1,len(particle_indices)))
+
     #############################################
-    ## Plot first 5 particles + COM
+    ## Plot first 5 particles together
     #############################################
-    for pid in particle_indices:
-        fig, ax = plt.subplots()
-        ax.plot(timesteps_exp, disp_particles_um[:,pid], label=f'Particle {pid} Displacement')
-        ax.set_xlabel("Time (s)")
-        ax.set_ylabel("Displacement (um)")
-        ax.grid(True)
-        fig.savefig(job.fn(f'displacement_particle_{pid}.png'), dpi=150)
-        plt.close()
-    
-    # COM plot
+
+    # Displacement
+    fig, ax = plt.subplots(figsize=(8,5))
+    for idx, pid in enumerate(particle_indices):
+        ax.plot(timesteps_exp, disp_particles_um[:, pid], label=f'Particle {pid}', color=colors[idx])
+    ax.set_xlabel("Time (s)")
+    ax.set_ylabel("Displacement (um)")
+    ax.set_title("Displacement of First 5 Particles")
+    ax.grid(True)
+    ax.legend()
+    fig.savefig(job.fn('displacement_first5_particles.png'), dpi=150)
+    plt.close()
+
+    # Total Distance
+    fig, ax = plt.subplots(figsize=(8,5))
+    for idx, pid in enumerate(particle_indices):
+        ax.plot(timesteps_exp, total_dist_particles_um[:, pid], label=f'Particle {pid}', color=colors[idx])
+    ax.set_xlabel("Time (s)")
+    ax.set_ylabel("Total Distance (um)")
+    ax.set_title("Total Distance of First 5 Particles")
+    ax.grid(True)
+    ax.legend()
+    fig.savefig(job.fn('total_distance_first5_particles.png'), dpi=150)
+    plt.close()
+
+    # MSD
+    fig, ax = plt.subplots(figsize=(8,5))
+    for idx, pid in enumerate(particle_indices):
+        msd_pid = np.cumsum(np.linalg.norm(active_unwrapped[:, pid, :] - active_unwrapped[0, pid, :], axis=1)**2) * len_conv_um**2
+        ax.plot(timesteps_exp, msd_pid, label=f'Particle {pid}', color=colors[idx])
+    ax.set_xlabel("Time (s)")
+    ax.set_ylabel("MSD (um^2)")
+    ax.set_title("MSD of First 5 Particles")
+    ax.grid(True)
+    ax.legend()
+    fig.savefig(job.fn('msd_first5_particles.png'), dpi=150)
+    plt.close()
+
+    #############################################
+    ## COM plots
+    #############################################
+
+    # Displacement
     fig, ax = plt.subplots()
     ax.plot(timesteps_exp, disp_com_um, label='COM Displacement', color='blue')
     ax.set_xlabel("Time (s)")
     ax.set_ylabel("Displacement (um)")
     ax.grid(True)
-    fig.savefig(job.fn(f'displacement_COM.png'), dpi=150)
+    fig.savefig(job.fn('displacement_COM.png'), dpi=150)
     plt.close()
-    
+
+    # Total Distance
+    fig, ax = plt.subplots()
+    ax.plot(timesteps_exp, total_dist_com_um, label='COM Total Distance', color='blue')
+    ax.set_xlabel("Time (s)")
+    ax.set_ylabel("Total Distance (um)")
+    ax.grid(True)
+    fig.savefig(job.fn('total_distance_COM.png'), dpi=150)
+    plt.close()
+
+    # MSD
+    fig, ax = plt.subplots()
+    ax.plot(timesteps_exp, msd_com, label='COM MSD', color='blue')
+    ax.set_xlabel("Time (s)")
+    ax.set_ylabel("MSD (um^2)")
+    ax.grid(True)
+    fig.savefig(job.fn('msd_COM.png'), dpi=150)
+    plt.close()
+
+    #############################################
+    ## Average ± Std over all particles
+    #############################################
+
+    # Displacement
+    fig, ax = plt.subplots()
+    ax.plot(timesteps_exp, mean_disp_particles, label='Mean Particle Displacement', color='green')
+    ax.fill_between(timesteps_exp,
+                    mean_disp_particles - std_disp_particles,
+                    mean_disp_particles + std_disp_particles,
+                    color='green', alpha=0.3, label='Std Dev')
+    ax.set_xlabel("Time (s)")
+    ax.set_ylabel("Displacement (um)")
+    ax.set_title("Average Particle Displacement ± 1 Std")
+    ax.grid(True)
+    ax.legend()
+    fig.savefig(job.fn('displacement_particles_avg.png'), dpi=150)
+    plt.close()
+
+    # Total Distance
+    fig, ax = plt.subplots()
+    ax.plot(timesteps_exp, mean_total_dist_particles, label='Mean Total Distance', color='orange')
+    ax.fill_between(timesteps_exp,
+                    mean_total_dist_particles - std_total_dist_particles,
+                    mean_total_dist_particles + std_total_dist_particles,
+                    color='orange', alpha=0.3, label='Std Dev')
+    ax.set_xlabel("Time (s)")
+    ax.set_ylabel("Total Distance (um)")
+    ax.set_title("Average Total Distance ± 1 Std")
+    ax.grid(True)
+    ax.legend()
+    fig.savefig(job.fn('total_distance_particles_avg.png'), dpi=150)
+    plt.close()
+
+    # MSD
+    fig, ax = plt.subplots()
+    ax.plot(timesteps_exp, msd_particles, label='Mean MSD', color='purple')
+    ax.fill_between(timesteps_exp,
+                    msd_particles - msd_std_particles,
+                    msd_particles + msd_std_particles,
+                    color='purple', alpha=0.3, label='Std Dev')
+    ax.set_xlabel("Time (s)")
+    ax.set_ylabel("MSD (um^2)")
+    ax.set_title("Average MSD ± 1 Std")
+    ax.grid(True)
+    ax.legend()
+    fig.savefig(job.fn('msd_particles_avg.png'), dpi=150)
+    plt.close()
+
+
     #############################################
     ## FFT example (COM)
     #############################################
@@ -251,25 +367,31 @@ def Analysis_implementation(job, communicator):
     # Compute average displacement & total distance over all active particles
     mean_disp_particles_um = np.mean(disp_particles_um, axis=1)        # mean over particles
     mean_total_dist_particles_um = np.mean(total_dist_particles_um, axis=1)
-
+    
     analysis_data = {
-        # COM quantities
-        "com_net_displacement_um": float(disp_com_um[-1]),
-        "com_total_distance_um": float(total_dist_com_um[-1]),
-
-        # Average over all particles
-        "mean_particle_net_displacement_um": float(mean_disp_particles_um[-1]),
-        "mean_particle_total_distance_um": float(mean_total_dist_particles_um[-1]),
-
-        # Individual first 5 particle final displacements
-        "particle_net_displacement_um": disp_particles_um[-1, :5].tolist(),
-        "particle_total_distance_um": total_dist_particles_um[-1, :5].tolist(),
-
-        # You can also save RACF, orientations, FFTs
-        "racf_particles": active_racf.tolist(),
-        "racf_com": com_racf.tolist(),
+        # Orientation
         "com_orientation": com_orientation.tolist(),
-        "particle_orientation": active_orientation.tolist()
+        
+        # COM
+        "com_displacement_um": disp_com_um.tolist(),
+        "com_total_distance_um": total_dist_com_um.tolist(),
+        "com_MSD_um2": msd_com.tolist(),
+
+        # Per-particle
+        "disp_particles_um": disp_particles_um.tolist(),
+        "total_dist_particles_um": total_dist_particles_um.tolist(),
+        "MSD_particles_um2": msd_particles.tolist(),
+        "MSD_particles_std_um2": msd_std_particles.tolist(),
+
+        # First 5 particles final values
+        "particle_net_displacement_um": disp_particles_um[-1,:5].tolist(),
+        "particle_total_distance_um": total_dist_particles_um[-1,:5].tolist(),
+
+        # Mean ± std
+        "mean_disp_particles_um": mean_disp_particles.tolist(),
+        "std_disp_particles_um": std_disp_particles.tolist(),
+        "mean_total_dist_particles_um": mean_total_dist_particles.tolist(),
+        "std_total_dist_particles_um": std_total_dist_particles.tolist()
     }
 
     all_data.update(analysis_data)
