@@ -49,7 +49,7 @@ def Analysis_implementation(job, communicator):
     #############################################
    
     #f = gsd.pygsd.GSDFile(open(job.fn('active.gsd'), 'rb'))
-    f = gsd.pygsd.GSDFile(open(job.fn('Demo.gsd'), 'rb'))
+    f = gsd.pygsd.GSDFile(open(job.fn('Run.gsd'), 'rb'))
     traj = gsd.hoomd.HOOMDTrajectory(f)
     
     time_indices = np.arange(len(traj))

@@ -2,14 +2,18 @@ import json
 import matplotlib
 import os
 import signac
+import glob
 
 import numpy as np
 import matplotlib.pyplot as plt
 import pandas as pd
+from scipy.fft import fft, fftfreq
 import seaborn as sns
 
 from itertools import combinations
 from collections import defaultdict
+
+from scipy.spatial.transform import Rotation as Rot
 
 # Currently not in use:
 
@@ -48,8 +52,95 @@ class JobParser:
         self.active_angle    = job.cached_statepoint['active_angle']
         self.torque_mag      = job.cached_statepoint['torque_mag']
 
-        #dynamical_bonding
-        self.dynamical_bonding   = job.cached_statepoint['dynamical_bonding']
+class AlignmentMetrics:
+    '''
+    Calculate alignment metrics between mesh and active components.
+    Rotate quaternion for orientation metrics
+    '''
+    def __init__(self):
+        self.v_dots = []
+        self.norm_v_dots = []
+        self.norm_v_dots_xy = []
+
+        self.norm_ori_dots = []
+        self.norm_ori_dots_xy = []
+
+        self.pos_dots = []
+        self.norm_pos_dots = []
+        self.norm_pos_dots_xy = []
+
+        self.inner_v_fft = None
+        self.inner_v_fft_xy = None
+        self.inner_ori_fft = None
+        self.inner_ori_fft_xy = None
+        self.inner_pos_fft = None
+        self.inner_normpos_fft = None
+        self.inner_normpos_fft_xy = None
+
+    def _normalize(self, vec):
+        norm = np.linalg.norm(vec)
+        return vec / norm if norm > 0 else vec
+
+    def _normalize_xy(self, vec):
+        return self._normalize(vec[:2])
+
+    def compute(self, mesh_com_velocity, active_com_velocity,
+                mesh_com_unwrapped, active_com_unwrapped,
+                active_com_orientation):
+
+        for mv, av, mp, ap, q in zip(mesh_com_velocity,
+                                     active_com_velocity,
+                                     mesh_com_unwrapped,
+                                     active_com_unwrapped,
+                                     active_com_orientation):
+
+            # Velocity
+            self.v_dots.append(np.dot(mv, av))
+            self.norm_v_dots.append(np.dot(self._normalize(mv), self._normalize(av)))
+            self.norm_v_dots_xy.append(np.dot(self._normalize_xy(mv), self._normalize_xy(av)))
+
+            # Orientation
+            q = self._normalize(q)
+            rotation = Rot.from_quat([q[1], q[2], q[3], q[0]])
+            rotated_v = rotation.apply(mv)
+
+            self.norm_ori_dots.append(np.dot(self._normalize(rotated_v), self._normalize(mv)))
+            self.norm_ori_dots_xy.append(np.dot(self._normalize_xy(rotated_v), self._normalize_xy(mv)))
+
+            # Position
+            self.pos_dots.append(np.dot(mp, ap))
+            self.norm_pos_dots.append(np.dot(self._normalize(mp), self._normalize(ap)))
+            self.norm_pos_dots_xy.append(np.dot(self._normalize_xy(mp), self._normalize_xy(ap)))
+
+    def summary_stats(self):
+        def stats(arr):
+            return {
+                'std': float(np.std(arr)),
+                'avg': float(np.average(arr)),
+                'max': float(np.max(arr)),
+                'min': float(np.min(arr))
+            }
+
+        return {
+            'velocity_alignment': stats(self.norm_v_dots),
+            'velocity_alignment_xy': stats(self.norm_v_dots_xy),
+
+            'orientation_alignment': stats(self.norm_ori_dots),
+            'orientation_alignment_xy': stats(self.norm_ori_dots_xy),
+
+            'position_alignment': stats(self.norm_pos_dots),
+            'position_alignment_xy': stats(self.norm_pos_dots_xy),
+        }
+    def compute_FFT_AM(self):
+        self.inner_v_fft = fft(self.norm_v_dots)
+        self.inner_v_fft_xy = fft(self.norm_v_dots_xy)
+    
+        self.inner_ori_fft = fft(self.norm_ori_dots)
+        self.inner_ori_fft_xy = fft(self.norm_ori_dots_xy)
+    
+        self.inner_pos_fft = fft(self.pos_dots)
+        self.inner_normpos_fft = fft(self.norm_pos_dots)
+        self.inner_normpos_fft_xy = fft(self.norm_pos_dots_xy)
 
 class BuoyancyAndGravity:
     ''':
@@ -105,6 +196,119 @@ class BuoyancyAndGravity:
         print('F_boy_mesh: ', self.F_boy_mesh, ' F_boy_rod: ', self.F_boy_rod)
         print('F_const_mesh: ', self.F_const_mesh, ' F_const_rod: ', self.F_const_rod)
 
+def extract_FFT_data(fft_data, freq_data):
+    """
+    Extracts the max amplitude and its corresponding frequency from FFT data.
+
+    Parameters:
+    - fft_data (np.ndarray): FFT complex data (1D).
+    - freq_data (np.ndarray): Corresponding frequency values (1D).
+
+    Returns:
+    - dict: Dictionary with max amplitude and associated frequency.
+    """
+    # Only take the positive half of the spectrum
+    pos_mask = freq_data > 0
+    pos_freq = freq_data[pos_mask]
+    fft_mag = np.abs(fft_data[pos_mask])
+    
+    # Find the index of the max amplitude
+    max_idx = np.argmax(fft_mag)
+    max_amp = fft_mag[max_idx]
+    max_freq = pos_freq[max_idx]
+
+    return {
+        'max_amp': max_amp,
+        'max_freq': max_freq
+    }
+
+        
+def clean_analysis_files(job):
+    path_dir = os.path.dirname(job.fn('Demo.gsd'))
+    png_files = glob.glob(os.path.join(path_dir, '*.png'))
+    html_files = glob.glob(os.path.join(path_dir, '*.html'))
+    
+    for file in png_files:
+        os.remove(file)
+    print(f"Deleted all .png files in directory: {path_dir}")
+
+    for file in html_files:
+        os.remove(file)
+    print(f"Deleted all .html files in directory: {path_dir}")
+
+def quaternion_acf(orientations):
+    num_frames = len(orientations)
+    acf = np.zeros(num_frames)
+
+    # Normalize all quaternions
+    orientations = np.array([(q / np.linalg.norm(q)) for q in orientations])
+    
+    # Compute autocorrelation for each lag tau
+    for tau in range(num_frames):
+        dot_products = []
+        for t in range(num_frames - tau):
+            dot_products.append(np.dot(orientations[t], orientations[t + tau]))
+        acf[tau] = np.mean(dot_products)  # Average over all t
+    
+    return acf
+
+
+def matplotlib_to_plotly(cmap, pl_entries=255):
+    # Get colormap from Matplotlib
+    cmap = matplotlib.cm.get_cmap(cmap, pl_entries)
+    colorscale = []
+
+    for k in range(cmap.N):
+        rgb = cmap(k)[:3]  # Ignore alpha if present
+        colorscale.append([k / (cmap.N - 1), f'rgb({int(rgb[0]*255)}, {int(rgb[1]*255)}, {int(rgb[2]*255)})'])
+
+    return colorscale
+    
+def get_unit_sphere():
+    u = np.linspace(0, 2 * np.pi, 50)
+    v = np.linspace(0, np.pi, 50)
+    sphere_x = np.outer(np.cos(u), np.sin(v))
+    sphere_y = np.outer(np.sin(u), np.sin(v))
+    sphere_z = np.outer(np.ones_like(u), np.cos(v))
+    return(sphere_x, sphere_y, sphere_z)
+
+def plot_solid_angle_dist(orientations):
+    '''
+    orientations must be given as 3_vectors in numpy array:
+    shape: (timesteps, 3)
+    '''
+    
+    # Normalize the vectors to unit length
+    norms = np.linalg.norm(orientations, axis=1)
+    normalized_orientations = orientations / norms[:, None]
+
+    # Convert the unit vectors to spherical coordinates (theta, phi)
+    # phi is the azimuthal angle, theta is the polar angle
+    phi = np.arctan2(normalized_orientations[:, 1], normalized_orientations[:, 0])  # Azimuthal angle
+    theta = np.arccos(normalized_orientations[:, 2])  # Polar angle
+
+    # Create a 2D histogram of spherical coordinates
+    phi_edges = np.linspace(-np.pi, np.pi, 30)  # Azimuthal angle bins
+    theta_edges = np.linspace(0, np.pi, 15)  # Polar angle bins
+    hist, phi_edges, theta_edges = np.histogram2d(phi, theta, bins=[phi_edges, theta_edges])
+    hist = hist / np.sum(hist) # Normalize
+
+    # Calc the solid angle for each bin (ΔΩ = sin(θ) * Δθ * Δφ)
+    dphi = phi_edges[1] - phi_edges[0]
+    dtheta = theta_edges[1] - theta_edges[0]
+    solid_angle = np.sin(theta_edges[:-1]) * dtheta * dphi
+    
+    # Multiply histogram by solid angle to get actual solid angle distribution
+    solid_angle = np.outer(np.ones(len(phi_edges) - 1), solid_angle)
+    solid_angle_distribution = hist * solid_angle
+    phi_grid, theta_grid = np.meshgrid(phi_edges[:-1], theta_edges[:-1]) # meshgrid for spherical coordinates
+
+    # Convert spherical coordinates to Cartesian coordinates for plotting
+    x_grid = np.sin(theta_grid) * np.cos(phi_grid)
+    y_grid = np.sin(theta_grid) * np.sin(phi_grid)
+    z_grid = np.cos(theta_grid)
+    
+    return x_grid, y_grid, z_grid, solid_angle_distribution
 
 def get_tether_params(frame, triangle_tags):
     triangle_cartesian_positions = frame.particles.position[triangle_tags]
@@ -121,9 +325,6 @@ def get_tether_params(frame, triangle_tags):
     return(l_min, l_c1, l_c0, l_max)
 
 def print_state(sigma, mesh_sigma, flattener_sigma, N_particles,  num_flattener, N_active, num_beads, bead_spacing, N_mesh, R, aspect_rat, freedom_rat, Pe, deltas, torque_mag, mass_mesh_bead, mass_rod, F_const_rod, F_const_mesh, job):
-    
-    print('dynamical_bonding: ', job.cached_statepoint['dynamical_bonding'])
-    
     print('sigma: ', sigma)
     print('mesh_sigma: ', mesh_sigma)
     print('flattener_sigma: ', flattener_sigma)
@@ -163,7 +364,6 @@ def print_state(sigma, mesh_sigma, flattener_sigma, N_particles,  num_flattener,
     with open(state_log_file, "w") as f:
         print('job: ', job, file=f)
         print('statepoints: ', job.sp, '\n\n', file=f)
-        print('dynamical_bonding: ', job.cached_statepoint['dynamical_bonding'], file=f)
         print('N_particles: ', N_particles, file=f)
         print('sigma: ', sigma, file=f)
         print('mesh_sigma: ', mesh_sigma, file=f)
