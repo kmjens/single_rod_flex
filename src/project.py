@@ -55,12 +55,14 @@ def Run_implementation(job, communicator):
     sphero_vol   = (sigma ** 3) * (3 * rod_length - 1) / 4 # approx as spherocylinder
     cylinder_vol = rod_length * np.pi * (sigma / 2) ** 2
     vol_diff     = cylinder_vol - sphero_vol
-    R            = (SP.freedom_rat * rod_length) / 2
+    R            = (SP.length_rat * rod_length) / 2
     L            = R * 5 # box size
 
     TriArea = SP.TriArea
-    num_tri = int(4 * np.pi * R**2 / TriArea)
+    SA_flex = 4 * np.pi * R**2
+    num_tri = int(SA_flex/ TriArea)
     N_mesh = num_tri + 2
+    k_bend = SP.k_bend_eff * N_flex / SA_flex
     N_particles = N_mesh + N_active + N_bead + N_flattener
     
     # Active, buoyant, and gravitational forces
@@ -312,7 +314,7 @@ def Run_implementation(job, communicator):
 
     # Helfrich bending potential:
     helfrich_potential = hoomd.md.mesh.bending.Helfrich(mesh_obj)
-    helfrich_potential.params["mesh"] = dict(k=SP.k_bend)
+    helfrich_potential.params["mesh"] = dict(k=k_bend)
     integrator.forces.append(helfrich_potential)
 
     # Area conservation potential:
@@ -427,7 +429,7 @@ def Run_implementation(job, communicator):
     print('step: ', sim.timestep)
 
     print('\nCurrent state:')
-    print_state(sigma, mesh_sigma, flattener_sigma, N_particles, num_flattener, N_active, num_beads, bead_spacing, N_mesh, R, SP.aspect_rat, SP.freedom_rat, Pe, deltas, SP.torque_mag, mass_mesh_bead, mass_rod, F_const_rod, F_const_mesh, job)
+    print_state(sigma, mesh_sigma, flattener_sigma, N_particles, num_flattener, N_active, num_beads, bead_spacing, N_mesh, SP.k_bend_eff, k_bend, R, SP.aspect_rat, SP.length_rat, Pe, deltas, SP.torque_mag, mass_mesh_bead, mass_rod, F_const_rod, F_const_mesh, job)
 
     
     os.rename(job.fn('Initialization.out.in_progress'), job.fn('Initilization.out'))

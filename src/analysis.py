@@ -31,7 +31,9 @@ def Analysis_implementation(job, communicator):
 
     # the following relations assume that sigma = 1
     R = (SP.freedom_rat * SP.aspect_rat) / 2
-    N_mesh = int(4 * np.pi * R**2 / SP.TriArea) + 2
+    SA_flex = 4 * np.pi * R**2
+    N_mesh = int(SA_flex / SP.TriArea) + 2
+    k_bend = SP.k_bend_eff *  N_mesh / SA_flex
     cylinder_vol = SP.aspect_rat * np.pi * (1 / 2) ** 2
 
     BG = BuoyancyAndGravity(R, N_mesh, cylinder_vol)
@@ -522,6 +524,7 @@ def Analysis_implementation(job, communicator):
     all_data.update(statepoints)
     
     analysis_data = {
+        "k_bend":        float(k_bend)
         "mesh_len_ratio_xz": float(ratio_xz),
         "mesh_len_ratio_yz": float(ratio_yz),
         "mesh_len_ratio_xy": float(ratio_xy),
