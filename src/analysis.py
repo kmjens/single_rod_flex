@@ -149,7 +149,7 @@ def Analysis_implementation(job, communicator):
                 active_racf[i,:,j] = rot_auto.particle_order
             if prev_com_ori is not None:
                 rot_auto.compute(ref_orientations=prev_com_ori, orientations=com_ori_reshaped)
-                com_racf[i,j] = rot_auto.particle_order
+                com_racf[i,j] = rot_auto.particle_order.item()
         
         prev_ori = ori_normed.copy()
         prev_com_ori = com_ori_reshaped.copy()
