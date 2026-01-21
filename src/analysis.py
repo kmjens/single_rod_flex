@@ -73,6 +73,7 @@ def Analysis_implementation(job, communicator):
     
     timesteps = np.arange(num_frames) * 10000
     timesteps_exp = timesteps * step_to_sec
+    print('numframes: ', num_frames)
     freq = fftfreq(num_frames, d=(timesteps_exp[1] - timesteps_exp[0]))
     fft_xlim_max = timesteps_exp[-1]/5
     
@@ -154,7 +155,7 @@ def Analysis_implementation(job, communicator):
         prev_com_ori = com_ori_reshaped.copy()
     
     #############################################
-    ## Displacements, Total Distance & MSD
+    ## Displacements & Total Distance
     #############################################
 
     # Compute COM quantities
@@ -163,16 +164,12 @@ def Analysis_implementation(job, communicator):
     for i in range(1, num_frames):
         total_dist_com_um[i] = total_dist_com_um[i-1] + np.linalg.norm(com_positions[i] - com_positions[i-1]) * len_conv_um
 
-    msd_com = np.cumsum(np.linalg.norm(com_positions - com_positions[0], axis=1)**2) * len_conv_um**2
+
+    #msd_com = np.cumsum(np.linalg.norm(com_positions - com_positions[0], axis=1)**2) * len_conv_um**2
 
     # Per-particle quantities
     disp_particles_um = np.linalg.norm(active_unwrapped - active_unwrapped[0], axis=2) * len_conv_um
     total_dist_particles_um = np.zeros_like(disp_particles_um)
-    for i in range(1, num_frames):
-        total_dist_particles_um[i] = total_dist_particles_um[i-1] + np.linalg.norm(active_unwrapped[i] - active_unwrapped[i-1], axis=1) * len_conv_um
-
-    msd_particles = np.mean(np.sum((active_unwrapped - active_unwrapped[0])**2, axis=2), axis=1)
-    msd_std_particles = np.std(np.sum((active_unwrapped - active_unwrapped[0])**2, axis=2), axis=1)
 
     # Mean and std for displacement & total distance
     mean_disp_particles = np.mean(disp_particles_um, axis=1)
@@ -182,6 +179,46 @@ def Analysis_implementation(job, communicator):
 
     # Colors for plotting
     colors = plt.cm.viridis(np.linspace(0,1,len(particle_indices)))
+
+    #############################################
+    ## MSD Calulation and plots
+    #############################################
+    
+    # use the already unwrapped particles with freud's msd_calculator
+    msd_calculator = freud.msd.MSD(box=box, mode='direct')
+    MSD = msd_calculator.compute(active_unwrapped*len_conv_um, images=None, reset=True)
+    msd_data = MSD.msd
+
+    # plot linear MSD and save
+    fig1 = matplotlib.figure.Figure(figsize=(8, 5))
+    ax = fig1.add_subplot()
+    data, = ax.plot(timesteps_exp,msd_data,color='k')
+    ax.set_xlabel('Time (s)')
+    ax.set_ylabel('MSD (um^2)')
+
+    # plot formatting
+    ax.set_title('MSD Plot')
+    ax.grid(True, which='both', linestyle='--', linewidth=0.5, color='gray', alpha=0.5)
+    ax.legend()
+
+    fig1.savefig(job.fn('MSD_plot'), dpi=350)
+    fig1
+
+    #plot log log and save
+    fig1 = matplotlib.figure.Figure(figsize=(8, 5))
+    ax = fig1.add_subplot()
+    data, = ax.loglog(timesteps_exp[1:],msd_data[1:],color='k')
+    data.set_label('Simulation')
+    ax.set_xlabel('Time (s)')
+    ax.set_ylabel('MSD (um^2)')
+
+    # plot formatting
+    ax.set_title('Log-log MSD Plot')
+    ax.grid(True, which='both', linestyle='--', linewidth=0.5, color='gray', alpha=0.5)
+    ax.legend()
+
+    fig1.savefig(job.fn('MSD_loglog_plot'), dpi=350)
+    fig1
 
     #############################################
     ## Plot first 5 particles together
@@ -211,19 +248,6 @@ def Analysis_implementation(job, communicator):
     fig.savefig(job.fn('total_distance_first5_particles.png'), dpi=150)
     plt.close()
 
-    # MSD
-    fig, ax = plt.subplots(figsize=(8,5))
-    for idx, pid in enumerate(particle_indices):
-        msd_pid = np.cumsum(np.linalg.norm(active_unwrapped[:, pid, :] - active_unwrapped[0, pid, :], axis=1)**2) * len_conv_um**2
-        ax.plot(timesteps_exp, msd_pid, label=f'Particle {pid}', color=colors[idx])
-    ax.set_xlabel("Time (s)")
-    ax.set_ylabel("MSD (um^2)")
-    ax.set_title("MSD of First 5 Particles")
-    ax.grid(True)
-    ax.legend()
-    fig.savefig(job.fn('msd_first5_particles.png'), dpi=150)
-    plt.close()
-
     #############################################
     ## COM plots
     #############################################
@@ -246,14 +270,6 @@ def Analysis_implementation(job, communicator):
     fig.savefig(job.fn('total_distance_COM.png'), dpi=150)
     plt.close()
 
-    # MSD
-    fig, ax = plt.subplots()
-    ax.plot(timesteps_exp, msd_com, label='COM MSD', color='blue')
-    ax.set_xlabel("Time (s)")
-    ax.set_ylabel("MSD (um^2)")
-    ax.grid(True)
-    fig.savefig(job.fn('msd_COM.png'), dpi=150)
-    plt.close()
 
     #############################################
     ## Average ± Std over all particles
@@ -287,21 +303,6 @@ def Analysis_implementation(job, communicator):
     ax.grid(True)
     ax.legend()
     fig.savefig(job.fn('total_distance_particles_avg.png'), dpi=150)
-    plt.close()
-
-    # MSD
-    fig, ax = plt.subplots()
-    ax.plot(timesteps_exp, msd_particles, label='Mean MSD', color='purple')
-    ax.fill_between(timesteps_exp,
-                    msd_particles - msd_std_particles,
-                    msd_particles + msd_std_particles,
-                    color='purple', alpha=0.3, label='Std Dev')
-    ax.set_xlabel("Time (s)")
-    ax.set_ylabel("MSD (um^2)")
-    ax.set_title("Average MSD ± 1 Std")
-    ax.grid(True)
-    ax.legend()
-    fig.savefig(job.fn('msd_particles_avg.png'), dpi=150)
     plt.close()
 
 
@@ -375,7 +376,6 @@ def Analysis_implementation(job, communicator):
         # COM
         #"com_displacement_um": disp_com_um.tolist(),
         #"com_total_distance_um": total_dist_com_um.tolist(),
-        #"com_MSD_um2": msd_com.tolist(),
 
         # Per-particle
         #"disp_particles_um": disp_particles_um.tolist(),

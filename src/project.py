@@ -362,7 +362,7 @@ def Run_implementation(job, communicator):
 
     print('Initialization complete.')
     
-    gsd_run = hoomd.write.GSD(trigger=hoomd.trigger.Periodic(int(10000)), #int(2000)
+    gsd_run = hoomd.write.GSD(trigger=hoomd.trigger.Periodic(int(2000)), #int(2000)
                                filename=job.fn('Run.gsd'),
                                logger=logger, mode='wb',
                                dynamic=['momentum','property','attribute','attribute/particles/diameter'],

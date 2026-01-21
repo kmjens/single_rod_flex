@@ -19,7 +19,7 @@ class MyDashboard(Dashboard):
         else:
             title_str = "Rounded"
         
-        return "{}, Aspect Ratio = {}, v0 = {}, Freedom Ratio = {}".format(title_str, job.sp["aspect_rat"], job.sp["v0"], job.sp["freedom_rat"])
+        return "{}, Aspect Ratio = {}".format(title_str, job.sp["aspect_rat"])
         
 
 if __name__ == "__main__":

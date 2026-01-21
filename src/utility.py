@@ -57,7 +57,7 @@ class JobParser:
         self.dynamical_bonding   = job.cached_statepoint['dynamical_bonding']
         self.confinement     = job.cached_statepoint['confinement']
         self.wall_R         = job.cached_statepoint['wall_R']
-        #self.gravity        = job.cached_statepoint['gravity']
+        self.gravity        = job.cached_statepoint['gravity']
 
 class BuoyancyAndGravity:
     ''':
