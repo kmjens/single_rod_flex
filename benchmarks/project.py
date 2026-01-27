@@ -23,9 +23,7 @@ def Run_implementation(job, communicator):
     #############################################
     ## Statepoints from init file
     #############################################
-    print('\nStarting simulation.')
-    print('job: ', job)
-    print('statepoints:\n', job.sp, '\n\n')
+    print("MPI ranks:", communicator.num_ranks)
     
     SP = JobParser(job)
 
@@ -62,7 +60,7 @@ def Run_implementation(job, communicator):
     SA_flex = 4 * np.pi * R**2
     num_tri = int(SA_flex/ TriArea)
     N_mesh = num_tri + 2
-    k_bend = SP.k_bend_eff * N_flex / SA_flex
+    k_bend = SP.k_bend
     N_particles = N_mesh + N_active + N_bead + N_flattener
     
     # Active, buoyant, and gravitational forces
@@ -78,12 +76,7 @@ def Run_implementation(job, communicator):
     print('mass_rod = ', mass_rod)
     print('mass_mesh_bead = ', mass_mesh_bead)
 
-    with open(job.fn('Setup.out.in_progress'), 'w') as file:
-        file.write('Initializing sim seed: ' + str(SP.simseed) + '\n')
-
-    with open(job.fn('Initialization.out.in_progress'), 'w') as file:
-        file.write('Initializing sim seed: ' + str(SP.simseed) + '\n')
-
+    
     #############################################
     ## Set up simulation object
     #############################################
@@ -96,8 +89,16 @@ def Run_implementation(job, communicator):
 
     sim = hoomd.Simulation(device=device)
     sim.seed = SP.simseed
+    rank = sim.device.communicator.rank
 
+    if rank == 0:
+        with open(job.fn('Setup.out.in_progress'), 'w') as file:
+            file.write('Initializing sim seed: ' + str(SP.simseed) + '\n')
 
+        with open(job.fn('Initialization.out.in_progress'), 'w') as file:
+            file.write('Initializing sim seed: ' + str(SP.simseed) + '\n')
+
+    '''
     #############################################
     ## Particle placement
     #############################################
@@ -118,13 +119,7 @@ def Run_implementation(job, communicator):
     for face in faces:
         triangle_points.append(face[1:])
     triangle_tags = np.vstack((triangle_points))
-
-    mesh_obj = hoomd.mesh.Mesh()
-    mesh_obj.types = ["mesh"]
-    mesh_obj.triangulation = dict(type_ids = [0] * len(triangle_tags),
-          triangles = triangle_tags)
-
-
+    
     # Rod position:
     A_position = [np.array([0,0,0])]
     A_orient = np.zeros((len(A_position),4),dtype=float)
@@ -145,9 +140,9 @@ def Run_implementation(job, communicator):
     position = np.append(mesh_position,A_position,axis=0)
     orientation = np.append(mesh_orient,A_orient,axis=0)
     typeid = np.append(mesh_typeid,A_typeid,axis=0)
-    diameter = np.append(mesh_diam,A_diam,axis=0)
     moment_inertia = np.append(mesh_MoI,A_MoI,axis=0)
     mass = np.append(mesh_mass, A_mass, axis=0)
+
 
     frame = gsd.hoomd.Frame()
     frame.particles.N = N_mesh + N_active
@@ -155,19 +150,123 @@ def Run_implementation(job, communicator):
     frame.particles.position = position[0:frame.particles.N]
     frame.particles.orientation = orientation[0:frame.particles.N]
     frame.particles.typeid = typeid[0:frame.particles.N]
-    frame.particles.diameter = diameter[0:frame.particles.N]
     frame.particles.moment_inertia = moment_inertia[0:frame.particles.N]
     frame.configuration.box = [L, L, L, 0, 0, 0]
     frame.particles.types = ['mesh','A','A_const','A_flattener']
-
-    with gsd.hoomd.open(name=job.fn('initial.gsd'), mode='w') as f:
-       f.append(frame)
+    
+    if rank ==0:
+        with gsd.hoomd.open(name=job.fn('initial.gsd'), mode='w') as f:
+           f.append(frame)
+        print('wrote initial.gsd', flush =True)
 
     state = sim.create_state_from_gsd(filename=job.fn('initial.gsd')) 
-    f = gsd.hoomd.open(name=job.fn('initial.gsd'),mode='r')
-    frame = f[0]
+    
+
+    # Create initial gsd
+    snapshot = sim.state.get_snapshot()
+    if rank == 0:
+        frame = gsd.hoomd.Frame()
+        frame.particles.N = len(snapshot.particles.position)
+        frame.particles.mass = mass
+        frame.particles.position = snapshot.particles.position
+        frame.particles.orientation = snapshot.particles.orientation
+        frame.particles.moment_inertia = snapshot.particles.moment_inertia
+        frame.particles.typeid = snapshot.particles.typeid
+        frame.particles.types = snapshot.particles.types
+        frame.particles.body = snapshot.particles.body # need to add this line to have rigid body diams
+        frame.configuration.box = snapshot.configuration.box
+
+        with gsd.hoomd.open(name=job.fn('initial_wRigid.gsd'), mode='w') as f:
+            f.append(frame)
+        print('initial_wRigid', flush=True)
+    '''
+
+    #############################################
+    # MPI-safe particle + frame + rigid-body setup
+    #############################################
+    x,y,z = fibonacci_sphere(num_pts=N_mesh, R=R)
+    mesh_position = np.column_stack((x,y,z))
+    mesh_orient = np.zeros((N_mesh,4),dtype=float)
+    mesh_orient[:,0] = 1
+    mesh_typeid = [0] * N_mesh
+    mesh_diam = [mesh_sigma] * N_mesh
+    mesh_MoI = np.zeros((N_mesh,3),dtype=float)
+    mesh_mass = [mass_mesh_bead] * N_mesh
+
+    mesh = pv.PolyData(mesh_position)
+    surface = mesh.delaunay_3d().extract_geometry()
+    faces = surface.faces.reshape((-1, 4))
+    triangle_points = []
+    for face in faces:
+        triangle_points.append(face[1:])
+    triangle_tags = np.vstack((triangle_points))
 
 
+    # --- 2. Active rods ---
+    A_position = np.zeros((N_active,3))   # Place rods at origin for now
+    A_orient = np.zeros((N_active,4))
+    A_orient[:,0] = 1.0
+    A_typeid = np.ones(N_active, dtype=int)  # "A" type
+    A_mass = np.full(N_active, mass_rod)
+    A_MoI = np.zeros((N_active,3))
+    A_MoI[:,1] = 1.0/12 * 5 * (rod_length * sigma)**2
+    A_MoI[:,2] = 1.0/12 * 5 * (rod_length * sigma)**2
+
+    # --- 3. Concatenate into full particle arrays ---
+    positions = np.vstack([mesh_position, A_position])
+    orientations = np.vstack([mesh_orient, A_orient])
+    typeids = np.concatenate([mesh_typeid, A_typeid])
+    masses = np.concatenate([mesh_mass, A_mass])
+    moments_inertia = np.vstack([mesh_MoI, A_MoI])
+
+    # --- 4. Create snapshot and simulation state ---
+    snapshot = gsd.hoomd.Frame()
+    snapshot.particles.N = N_mesh + N_active
+    snapshot.particles.position = positions
+    snapshot.particles.orientation = orientations
+    snapshot.particles.typeid = typeids
+    snapshot.particles.mass = masses
+    snapshot.particles.moment_inertia = moments_inertia
+    snapshot.configuration.box = [L, L, L, 0, 0, 0]
+    snapshot.particles.types = ['mesh','A','A_const','A_flattener']  # All types
+
+    # Create simulation from snapshot (MPI-safe: all ranks do this)
+    sim = hoomd.Simulation(device=device)
+    sim.create_state_from_snapshot(snapshot)
+
+    # --- 5. Set up rigid bodies ---
+    bead_type_list = ['A_const'] * N_bead
+    bead_pos_list = get_bead_pos(rod_length, sigma, num_const_beads)
+    bead_orient_list = [(1,0,0,0)] * N_bead
+    flattener_type_list = ['A_flattener'] * N_flattener
+    flattener_pos_list = get_flattener_pos(num_flattener, sigma, flattener_sigma, rod_length)
+    flattener_orient_list = [(1,0,0,0)] * N_flattener
+
+    const_type_list = bead_type_list + flattener_type_list
+    const_pos_list  = bead_pos_list + flattener_pos_list
+    const_orient_list = bead_orient_list + flattener_orient_list
+
+    rigid = hoomd.md.constrain.Rigid()
+    rigid.body["A"] = {
+        "constituent_types": const_type_list,
+        "positions": const_pos_list,
+        "orientations": const_orient_list,
+    }
+    rigid.create_bodies(sim.state)  # MPI-safe: must be called on all ranks
+
+    # --- 6. Set up integrator ---
+    integrator = hoomd.md.Integrator(dt=SP.dt, rigid=rigid, integrate_rotational_dof=True)
+    sim.operations.integrator = integrator
+
+
+    #############################################
+    ## Set up filters and integrator
+    #############################################
+
+    filter_all  = hoomd.filter.All()
+    filter_mesh = hoomd.filter.Type(['mesh'])
+    filter_rigid = hoomd.filter.Rigid(("center","free"))
+    
     #############################################
     # Construct rod rigid bodies
     #############################################
@@ -197,43 +296,11 @@ def Run_implementation(job, communicator):
         "orientations":      const_orient_list
     }
     rigid.create_bodies(sim.state)
-
-    diameter = np.append(diameter, bead_diam, axis=0)
-    diameter = np.append(diameter, flattener_diam, axis=0)
-
-    mass = np.append(mass, bead_mass, axis=0)
-    mass = np.append(mass, flattener_mass, axis=0)
     
-    # Create initial gsd
-    snapshot = sim.state.get_snapshot()
-    frame = gsd.hoomd.Frame()
-    frame.particles.N = len(snapshot.particles.position)
-    frame.particles.mass = mass
-    frame.particles.position = snapshot.particles.position
-    frame.particles.orientation = snapshot.particles.orientation
-    frame.particles.moment_inertia = snapshot.particles.moment_inertia
-    frame.particles.typeid = snapshot.particles.typeid
-    frame.particles.diameter = diameter
-    frame.particles.types = snapshot.particles.types
-    frame.particles.body = snapshot.particles.body # need to add this line to have rigid body diams
-    frame.configuration.box = snapshot.configuration.box
+    if rank == 0:
+        print('rigid bodies done.', flush=True)
 
-    with gsd.hoomd.open(name=job.fn('initial_wRigid.gsd'), mode='w') as f:
-        f.append(frame)
-    
-    sim = hoomd.Simulation(device=device)
-    sim.seed = SP.simseed
-    state = sim.create_state_from_gsd(filename=job.fn('initial_wRigid.gsd'))
 
-    snap = sim.state.get_snapshot()
-
-    #############################################
-    ## Set up filters and integrator
-    #############################################
-
-    filter_all  = hoomd.filter.All()
-    filter_mesh = hoomd.filter.Type(['mesh'])
-    filter_rigid = hoomd.filter.Rigid(("center","free"))
 
     integrator = hoomd.md.Integrator(
             dt=SP.dt,
@@ -245,6 +312,10 @@ def Run_implementation(job, communicator):
     langevin.gamma.default = gamma
     langevin.gamma_r.default = gamma_r
     integrator.methods.append(langevin)
+    
+    if rank == 0:
+        print("Langevin test.")
+
     ''' 
     langevin_mesh = hoomd.md.methods.Langevin(filter=filter_mesh, kT=SP.kT)
     langevin_mesh.gamma.default = mesh_gamma
@@ -300,8 +371,17 @@ def Run_implementation(job, communicator):
 
     integrator.forces.append(ExpLJ)
 
+    if rank == 0:
+        print("WCA added.")
+
     # Apply tethering potential to mesh:
-    l_min, l_c1, l_c0, l_max = get_tether_params(frame, triangle_tags)
+    l_min, l_c1, l_c0, l_max = get_tether_params(mesh, triangle_tags)
+    
+    mesh_obj = hoomd.mesh.Mesh()
+    mesh_obj.triangulation = dict(
+            triangles=triangle_tags,
+            type_ids=[0]*len(triangle_tags)
+        )
 
     mesh_bond_potential = hoomd.md.mesh.bond.Tether(mesh_obj)
     mesh_bond_potential.params["mesh"] = dict(
@@ -311,11 +391,19 @@ def Run_implementation(job, communicator):
             l_c0=l_c0,
             l_max=l_max)
     integrator.forces.append(mesh_bond_potential)
+    
+    if rank == 0:
+        print("bond added.", flush=True)
 
-    # Helfrich bending potential:
-    helfrich_potential = hoomd.md.mesh.bending.Helfrich(mesh_obj)
-    helfrich_potential.params["mesh"] = dict(k=k_bend)
-    integrator.forces.append(helfrich_potential)
+    
+    # Bending potential (ACCESS only)
+    bend = hoomd.md.mesh.bending.BendingRigidity(mesh_obj)
+    bend.params["mesh"] = dict(k = k_bend)
+    integrator.forces.append(bend)
+
+
+    if rank == 0:
+        print("bend added.", flush=True)
 
     # Area conservation potential:
     k_area = SP.k_area_i
@@ -323,6 +411,9 @@ def Run_implementation(job, communicator):
     area_potential = hoomd.md.mesh.conservation.TriangleArea(mesh_obj)
     area_potential.params.default = dict(k=k_area, A0=TriArea)
     integrator.forces.append(area_potential)
+    
+    if rank == 0:
+        print("area added.", flush=True)
     
     # Add dynamical bonding if specified
     if SP.dynamical_bonding == "True":
@@ -340,6 +431,8 @@ def Run_implementation(job, communicator):
     wlj.params['mesh'] = {"sigma": unit_sigma, "epsilon": 1.0, "r_cut": 2**(1/6)*unit_sigma}
     wlj.params[['A','A_const','A_flattener']] = {"epsilon": 0.0, "sigma": 1.0, "r_cut": 0.}
     integrator.forces.append(wlj)
+    if rank == 0:
+        print("wall added.", flush =True)
 
 
     #############################################
@@ -347,28 +440,53 @@ def Run_implementation(job, communicator):
     #############################################
 
     snap = sim.state.get_snapshot()
-    print('after potentials:', snap.particles.diameter)
 
     # GSD logger:
     logger = hoomd.logging.Logger(['particle','constraint'])
     gsd_oper = hoomd.write.GSD(trigger=hoomd.trigger.Periodic(int(10000)), #int(2000)
                                filename=job.fn('Initialize.gsd'),
                                logger=logger, mode='wb',
-                               dynamic=['momentum','property','attribute','attribute/particles/diameter'],
+                               dynamic=['momentum','property','attribute'],
                                filter=filter_all)
-    gsd_oper.write_diameter = True
     sim.operations += gsd_oper
     sim.state.thermalize_particle_momenta(filter=filter_all, kT=SP.kT)
     
+    if rank == 0:
+        print("logger added.", flush=True)
+    
     # Initialize
     sim.run(0)
-    print('Successfully ran for 0 timestep.\n')
+    if rank ==0:
+        print('Successfully ran for 0 timestep.\n', flush=True)
 
     snap = sim.state.get_snapshot()
-    print('particle size:', snap.particles.diameter)
 
-    print('Equilibrating mesh...')
-    sim.run(5000)
+    if rank ==0:
+        print('Equilibrating mesh...', flush=True)
+    
+    sim.run(100)
+    if rank ==0:
+        print('tps: ', sim.tps, flush=True)
+        print('step: ', sim.timestep, flush=True)
+    
+    sim.run(100)
+    if rank ==0:
+        print('tps: ', sim.tps, flush=True)
+        print('step: ', sim.timestep, flush=True)
+    sim.run(100)
+    if rank ==0:
+        print('tps: ', sim.tps, flush=True)
+        print('step: ', sim.timestep, flush=True)
+    
+    sim.run(100)
+    if rank ==0:
+        print('tps: ', sim.tps, flush=True)
+        print('step: ', sim.timestep, flush=True)
+    
+    sim.run(1000)
+    if rank ==0:
+        print('tps: ', sim.tps, flush=True)
+        print('step: ', sim.timestep, flush=True)
 
     while k_area < SP.k_area_f:
         snapshot = sim.state.get_snapshot()
@@ -418,50 +536,14 @@ def Run_implementation(job, communicator):
     final_frame_writer = hoomd.write.GSD(trigger=hoomd.trigger.On(final_timestep),
                                         filename=job.fn("final_init_frame.gsd"),
                                         logger=logger, mode='wb',
-                                        dynamic=['momentum','property','attribute','attribute/particles/diameter'],
+                                        dynamic=['momentum','property','attribute'],
                                         filter=filter_all)
 
-    final_frame_writer.write_diameter = True
     sim.operations += final_frame_writer
     
     sim.run(1)
     gsd_oper.flush()
     print('step: ', sim.timestep)
-
-    print('\nCurrent state:')
-    print_state(sigma, mesh_sigma, flattener_sigma, N_particles, num_flattener, N_active, num_beads, bead_spacing, N_mesh, SP.k_bend_eff, k_bend, R, SP.aspect_rat, SP.length_rat, Pe, deltas, SP.torque_mag, mass_mesh_bead, mass_rod, F_const_rod, F_const_mesh, job)
-
-    
-    os.rename(job.fn('Initialization.out.in_progress'), job.fn('Initilization.out'))
-
-    print('Initialization complete.')
-    
-    with open(job.fn('Run.out.in_progress'), 'w') as file:
-        file.write('Running sim seed: ' + str(SP.simseed) + '\n')
-    
-    gsd_run = hoomd.write.GSD(trigger=hoomd.trigger.Periodic(int(10000)), #int(2000)
-                               filename=job.fn('Run.gsd'),
-                               logger=logger, mode='wb',
-                               dynamic=['momentum','property','attribute','attribute/particles/diameter'],
-                               filter=filter_all)
-    gsd_run.write_diameter = True
-    sim.operations += gsd_run
-    
-    print('Running for demo...')
-    while sim.timestep < SP.runtime:
-        sim.run(10000)
-        gsd_oper.flush()
-        print('step: ', sim.timestep)
-    
-
-    '''
-    # triangle_tags: shape (n_triangles, 3), dtype=int
-    triangle_tags = triangle_tags.tolist()
-
-    type_ids = [0] * len(triangle_tags)
-    with open(job.fn("triangles.json"), "w") as f:
-        json.dump({"triangles": triangle_tags, "type_ids": type_ids}, f)
-    '''
 
     os.rename(job.fn('Run.out.in_progress'), job.fn('Run.out'))
     print('Run complete.')

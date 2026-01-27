@@ -1,0 +1,902 @@
+MPI ranks: 32
+Peclet Number =  25.0
+time unit conversion:  0.005845586908136183 sec/sim unit
+F_grav_mesh:  8.487449177146344  F_grav_rod:  101.14995912175824
+F_boy_mesh:  8.375503131572037  F_boy_rod:  92.5702750891091
+F_const_mesh:  -0.11194604557430665  F_const_rod:  -8.57968403264914
+mass_rod =  0.9061594987080823
+mass_mesh_bead =  0.07603545032000769
+rigid bodies done.
+Langevin test.
+WCA added.
+avg edge length:  0.6384538013292764
+bond added.
+bend added.
+area added.
+wall added.
+logger added.
+Successfully ran for 0 timestep.
+
+Equilibrating mesh...
+tps:  307.680000492288
+step:  100
+tps:  7260.582298700356
+step:  200
+tps:  6952.169076751947
+step:  300
+tps:  8125.457056959453
+step:  400
+tps:  8349.475652928995
+step:  1400
+MPI ranks: 32
+Peclet Number =  25.0
+time unit conversion:  0.005845586908136183 sec/sim unit
+F_grav_mesh:  8.487449177146344  F_grav_rod:  101.14995912175824
+F_boy_mesh:  8.375503131572037  F_boy_rod:  92.5702750891091
+F_const_mesh:  -0.11194604557430665  F_const_rod:  -8.57968403264914
+mass_rod =  0.9061594987080823
+mass_mesh_bead =  0.07603545032000769
+avg edge length:  0.6384538013292764
+MPI ranks: 32
+Peclet Number =  25.0
+time unit conversion:  0.005845586908136183 sec/sim unit
+F_grav_mesh:  8.487449177146344  F_grav_rod:  101.14995912175824
+F_boy_mesh:  8.375503131572037  F_boy_rod:  92.5702750891091
+F_const_mesh:  -0.11194604557430665  F_const_rod:  -8.57968403264914
+mass_rod =  0.9061594987080823
+mass_mesh_bead =  0.07603545032000769
+avg edge length:  0.6384538013292764
+MPI ranks: 32
+Peclet Number =  25.0
+time unit conversion:  0.005845586908136183 sec/sim unit
+F_grav_mesh:  8.487449177146344  F_grav_rod:  101.14995912175824
+F_boy_mesh:  8.375503131572037  F_boy_rod:  92.5702750891091
+F_const_mesh:  -0.11194604557430665  F_const_rod:  -8.57968403264914
+mass_rod =  0.9061594987080823
+mass_mesh_bead =  0.07603545032000769
+avg edge length:  0.6384538013292764
+MPI ranks: 32
+Peclet Number =  25.0
+time unit conversion:  0.005845586908136183 sec/sim unit
+F_grav_mesh:  8.487449177146344  F_grav_rod:  101.14995912175824
+F_boy_mesh:  8.375503131572037  F_boy_rod:  92.5702750891091
+F_const_mesh:  -0.11194604557430665  F_const_rod:  -8.57968403264914
+mass_rod =  0.9061594987080823
+mass_mesh_bead =  0.07603545032000769
+avg edge length:  0.6384538013292764
+MPI ranks: 32
+Peclet Number =  25.0
+time unit conversion:  0.005845586908136183 sec/sim unit
+F_grav_mesh:  8.487449177146344  F_grav_rod:  101.14995912175824
+F_boy_mesh:  8.375503131572037  F_boy_rod:  92.5702750891091
+F_const_mesh:  -0.11194604557430665  F_const_rod:  -8.57968403264914
+mass_rod =  0.9061594987080823
+mass_mesh_bead =  0.07603545032000769
+avg edge length:  0.6384538013292764
+MPI ranks: 32
+Peclet Number =  25.0
+time unit conversion:  0.005845586908136183 sec/sim unit
+F_grav_mesh:  8.487449177146344  F_grav_rod:  101.14995912175824
+F_boy_mesh:  8.375503131572037  F_boy_rod:  92.5702750891091
+F_const_mesh:  -0.11194604557430665  F_const_rod:  -8.57968403264914
+mass_rod =  0.9061594987080823
+mass_mesh_bead =  0.07603545032000769
+avg edge length:  0.6384538013292764
+MPI ranks: 32
+Peclet Number =  25.0
+time unit conversion:  0.005845586908136183 sec/sim unit
+F_grav_mesh:  8.487449177146344  F_grav_rod:  101.14995912175824
+F_boy_mesh:  8.375503131572037  F_boy_rod:  92.5702750891091
+F_const_mesh:  -0.11194604557430665  F_const_rod:  -8.57968403264914
+mass_rod =  0.9061594987080823
+mass_mesh_bead =  0.07603545032000769
+avg edge length:  0.6384538013292764
+MPI ranks: 32
+Peclet Number =  25.0
+time unit conversion:  0.005845586908136183 sec/sim unit
+F_grav_mesh:  8.487449177146344  F_grav_rod:  101.14995912175824
+F_boy_mesh:  8.375503131572037  F_boy_rod:  92.5702750891091
+F_const_mesh:  -0.11194604557430665  F_const_rod:  -8.57968403264914
+mass_rod =  0.9061594987080823
+mass_mesh_bead =  0.07603545032000769
+avg edge length:  0.6384538013292764
+MPI ranks: 32
+Peclet Number =  25.0
+time unit conversion:  0.005845586908136183 sec/sim unit
+F_grav_mesh:  8.487449177146344  F_grav_rod:  101.14995912175824
+F_boy_mesh:  8.375503131572037  F_boy_rod:  92.5702750891091
+F_const_mesh:  -0.11194604557430665  F_const_rod:  -8.57968403264914
+mass_rod =  0.9061594987080823
+mass_mesh_bead =  0.07603545032000769
+avg edge length:  0.6384538013292764
+MPI ranks: 32
+Peclet Number =  25.0
+time unit conversion:  0.005845586908136183 sec/sim unit
+F_grav_mesh:  8.487449177146344  F_grav_rod:  101.14995912175824
+F_boy_mesh:  8.375503131572037  F_boy_rod:  92.5702750891091
+F_const_mesh:  -0.11194604557430665  F_const_rod:  -8.57968403264914
+mass_rod =  0.9061594987080823
+mass_mesh_bead =  0.07603545032000769
+avg edge length:  0.6384538013292764
+MPI ranks: 32
+Peclet Number =  25.0
+time unit conversion:  0.005845586908136183 sec/sim unit
+F_grav_mesh:  8.487449177146344  F_grav_rod:  101.14995912175824
+F_boy_mesh:  8.375503131572037  F_boy_rod:  92.5702750891091
+F_const_mesh:  -0.11194604557430665  F_const_rod:  -8.57968403264914
+mass_rod =  0.9061594987080823
+mass_mesh_bead =  0.07603545032000769
+avg edge length:  0.6384538013292764
+MPI ranks: 32
+Peclet Number =  25.0
+time unit conversion:  0.005845586908136183 sec/sim unit
+F_grav_mesh:  8.487449177146344  F_grav_rod:  101.14995912175824
+F_boy_mesh:  8.375503131572037  F_boy_rod:  92.5702750891091
+F_const_mesh:  -0.11194604557430665  F_const_rod:  -8.57968403264914
+mass_rod =  0.9061594987080823
+mass_mesh_bead =  0.07603545032000769
+avg edge length:  0.6384538013292764
+MPI ranks: 32
+Peclet Number =  25.0
+time unit conversion:  0.005845586908136183 sec/sim unit
+F_grav_mesh:  8.487449177146344  F_grav_rod:  101.14995912175824
+F_boy_mesh:  8.375503131572037  F_boy_rod:  92.5702750891091
+F_const_mesh:  -0.11194604557430665  F_const_rod:  -8.57968403264914
+mass_rod =  0.9061594987080823
+mass_mesh_bead =  0.07603545032000769
+avg edge length:  0.6384538013292764
+MPI ranks: 32
+Peclet Number =  25.0
+time unit conversion:  0.005845586908136183 sec/sim unit
+F_grav_mesh:  8.487449177146344  F_grav_rod:  101.14995912175824
+F_boy_mesh:  8.375503131572037  F_boy_rod:  92.5702750891091
+F_const_mesh:  -0.11194604557430665  F_const_rod:  -8.57968403264914
+mass_rod =  0.9061594987080823
+mass_mesh_bead =  0.07603545032000769
+avg edge length:  0.6384538013292764
+MPI ranks: 32
+Peclet Number =  25.0
+time unit conversion:  0.005845586908136183 sec/sim unit
+F_grav_mesh:  8.487449177146344  F_grav_rod:  101.14995912175824
+F_boy_mesh:  8.375503131572037  F_boy_rod:  92.5702750891091
+F_const_mesh:  -0.11194604557430665  F_const_rod:  -8.57968403264914
+mass_rod =  0.9061594987080823
+mass_mesh_bead =  0.07603545032000769
+avg edge length:  0.6384538013292764
+MPI ranks: 32
+Peclet Number =  25.0
+time unit conversion:  0.005845586908136183 sec/sim unit
+F_grav_mesh:  8.487449177146344  F_grav_rod:  101.14995912175824
+F_boy_mesh:  8.375503131572037  F_boy_rod:  92.5702750891091
+F_const_mesh:  -0.11194604557430665  F_const_rod:  -8.57968403264914
+mass_rod =  0.9061594987080823
+mass_mesh_bead =  0.07603545032000769
+avg edge length:  0.6384538013292764
+MPI ranks: 32
+Peclet Number =  25.0
+time unit conversion:  0.005845586908136183 sec/sim unit
+F_grav_mesh:  8.487449177146344  F_grav_rod:  101.14995912175824
+F_boy_mesh:  8.375503131572037  F_boy_rod:  92.5702750891091
+F_const_mesh:  -0.11194604557430665  F_const_rod:  -8.57968403264914
+mass_rod =  0.9061594987080823
+mass_mesh_bead =  0.07603545032000769
+avg edge length:  0.6384538013292764
+MPI ranks: 32
+Peclet Number =  25.0
+time unit conversion:  0.005845586908136183 sec/sim unit
+F_grav_mesh:  8.487449177146344  F_grav_rod:  101.14995912175824
+F_boy_mesh:  8.375503131572037  F_boy_rod:  92.5702750891091
+F_const_mesh:  -0.11194604557430665  F_const_rod:  -8.57968403264914
+mass_rod =  0.9061594987080823
+mass_mesh_bead =  0.07603545032000769
+avg edge length:  0.6384538013292764
+MPI ranks: 32
+Peclet Number =  25.0
+time unit conversion:  0.005845586908136183 sec/sim unit
+F_grav_mesh:  8.487449177146344  F_grav_rod:  101.14995912175824
+F_boy_mesh:  8.375503131572037  F_boy_rod:  92.5702750891091
+F_const_mesh:  -0.11194604557430665  F_const_rod:  -8.57968403264914
+mass_rod =  0.9061594987080823
+mass_mesh_bead =  0.07603545032000769
+avg edge length:  0.6384538013292764
+MPI ranks: 32
+Peclet Number =  25.0
+time unit conversion:  0.005845586908136183 sec/sim unit
+F_grav_mesh:  8.487449177146344  F_grav_rod:  101.14995912175824
+F_boy_mesh:  8.375503131572037  F_boy_rod:  92.5702750891091
+F_const_mesh:  -0.11194604557430665  F_const_rod:  -8.57968403264914
+mass_rod =  0.9061594987080823
+mass_mesh_bead =  0.07603545032000769
+avg edge length:  0.6384538013292764
+MPI ranks: 32
+Peclet Number =  25.0
+time unit conversion:  0.005845586908136183 sec/sim unit
+F_grav_mesh:  8.487449177146344  F_grav_rod:  101.14995912175824
+F_boy_mesh:  8.375503131572037  F_boy_rod:  92.5702750891091
+F_const_mesh:  -0.11194604557430665  F_const_rod:  -8.57968403264914
+mass_rod =  0.9061594987080823
+mass_mesh_bead =  0.07603545032000769
+avg edge length:  0.6384538013292764
+MPI ranks: 32
+Peclet Number =  25.0
+time unit conversion:  0.005845586908136183 sec/sim unit
+F_grav_mesh:  8.487449177146344  F_grav_rod:  101.14995912175824
+F_boy_mesh:  8.375503131572037  F_boy_rod:  92.5702750891091
+F_const_mesh:  -0.11194604557430665  F_const_rod:  -8.57968403264914
+mass_rod =  0.9061594987080823
+mass_mesh_bead =  0.07603545032000769
+avg edge length:  0.6384538013292764
+MPI ranks: 32
+Peclet Number =  25.0
+time unit conversion:  0.005845586908136183 sec/sim unit
+F_grav_mesh:  8.487449177146344  F_grav_rod:  101.14995912175824
+F_boy_mesh:  8.375503131572037  F_boy_rod:  92.5702750891091
+F_const_mesh:  -0.11194604557430665  F_const_rod:  -8.57968403264914
+mass_rod =  0.9061594987080823
+mass_mesh_bead =  0.07603545032000769
+avg edge length:  0.6384538013292764
+MPI ranks: 32
+Peclet Number =  25.0
+time unit conversion:  0.005845586908136183 sec/sim unit
+F_grav_mesh:  8.487449177146344  F_grav_rod:  101.14995912175824
+F_boy_mesh:  8.375503131572037  F_boy_rod:  92.5702750891091
+F_const_mesh:  -0.11194604557430665  F_const_rod:  -8.57968403264914
+mass_rod =  0.9061594987080823
+mass_mesh_bead =  0.07603545032000769
+avg edge length:  0.6384538013292764
+MPI ranks: 32
+Peclet Number =  25.0
+time unit conversion:  0.005845586908136183 sec/sim unit
+F_grav_mesh:  8.487449177146344  F_grav_rod:  101.14995912175824
+F_boy_mesh:  8.375503131572037  F_boy_rod:  92.5702750891091
+F_const_mesh:  -0.11194604557430665  F_const_rod:  -8.57968403264914
+mass_rod =  0.9061594987080823
+mass_mesh_bead =  0.07603545032000769
+avg edge length:  0.6384538013292764
+MPI ranks: 32
+Peclet Number =  25.0
+time unit conversion:  0.005845586908136183 sec/sim unit
+F_grav_mesh:  8.487449177146344  F_grav_rod:  101.14995912175824
+F_boy_mesh:  8.375503131572037  F_boy_rod:  92.5702750891091
+F_const_mesh:  -0.11194604557430665  F_const_rod:  -8.57968403264914
+mass_rod =  0.9061594987080823
+mass_mesh_bead =  0.07603545032000769
+avg edge length:  0.6384538013292764
+MPI ranks: 32
+Peclet Number =  25.0
+time unit conversion:  0.005845586908136183 sec/sim unit
+F_grav_mesh:  8.487449177146344  F_grav_rod:  101.14995912175824
+F_boy_mesh:  8.375503131572037  F_boy_rod:  92.5702750891091
+F_const_mesh:  -0.11194604557430665  F_const_rod:  -8.57968403264914
+mass_rod =  0.9061594987080823
+mass_mesh_bead =  0.07603545032000769
+avg edge length:  0.6384538013292764
+MPI ranks: 32
+Peclet Number =  25.0
+time unit conversion:  0.005845586908136183 sec/sim unit
+F_grav_mesh:  8.487449177146344  F_grav_rod:  101.14995912175824
+F_boy_mesh:  8.375503131572037  F_boy_rod:  92.5702750891091
+F_const_mesh:  -0.11194604557430665  F_const_rod:  -8.57968403264914
+mass_rod =  0.9061594987080823
+mass_mesh_bead =  0.07603545032000769
+avg edge length:  0.6384538013292764
+MPI ranks: 32
+Peclet Number =  25.0
+time unit conversion:  0.005845586908136183 sec/sim unit
+F_grav_mesh:  8.487449177146344  F_grav_rod:  101.14995912175824
+F_boy_mesh:  8.375503131572037  F_boy_rod:  92.5702750891091
+F_const_mesh:  -0.11194604557430665  F_const_rod:  -8.57968403264914
+mass_rod =  0.9061594987080823
+mass_mesh_bead =  0.07603545032000769
+avg edge length:  0.6384538013292764
+MPI ranks: 32
+Peclet Number =  25.0
+time unit conversion:  0.005845586908136183 sec/sim unit
+F_grav_mesh:  8.487449177146344  F_grav_rod:  101.14995912175824
+F_boy_mesh:  8.375503131572037  F_boy_rod:  92.5702750891091
+F_const_mesh:  -0.11194604557430665  F_const_rod:  -8.57968403264914
+mass_rod =  0.9061594987080823
+mass_mesh_bead =  0.07603545032000769
+avg edge length:  0.6384538013292764
+MPI ranks: 32
+Peclet Number =  25.0
+time unit conversion:  0.005845586908136183 sec/sim unit
+F_grav_mesh:  8.487449177146344  F_grav_rod:  101.14995912175824
+F_boy_mesh:  8.375503131572037  F_boy_rod:  92.5702750891091
+F_const_mesh:  -0.11194604557430665  F_const_rod:  -8.57968403264914
+mass_rod =  0.9061594987080823
+mass_mesh_bead =  0.07603545032000769
+avg edge length:  0.6384538013292764
+Traceback (most recent call last):
+Traceback (most recent call last):
+Traceback (most recent call last):
+Traceback (most recent call last):
+  File "/anvil/scratch/x-kjensen/flexicles/Haichao/ACCESS_benchmarks_2026/benchmarks/project.py", line 567, in <module>
+    globals()[args.action](*jobs)
+    ~~~~~~~~~~~~~~~~~~~~~~^^^^^^^
+  File "/anvil/scratch/x-kjensen/flexicles/Haichao/ACCESS_benchmarks_2026/benchmarks/project.py", line 555, in Run
+    Run_implementation(jobs[communicator.partition], communicator)
+    ~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/anvil/scratch/x-kjensen/flexicles/Haichao/ACCESS_benchmarks_2026/benchmarks/project.py", line 496, in Run_implementation
+    TriArea = 4 * np.pi * R_vert_avg**2 / len(faces)
+                          ^^^^^^^^^^
+UnboundLocalError: cannot access local variable 'R_vert_avg' where it is not associated with a value
+  File "/anvil/scratch/x-kjensen/flexicles/Haichao/ACCESS_benchmarks_2026/benchmarks/project.py", line 567, in <module>
+    globals()[args.action](*jobs)
+    ~~~~~~~~~~~~~~~~~~~~~~^^^^^^^
+Traceback (most recent call last):
+  File "/anvil/scratch/x-kjensen/flexicles/Haichao/ACCESS_benchmarks_2026/benchmarks/project.py", line 567, in <module>
+    globals()[args.action](*jobs)
+    ~~~~~~~~~~~~~~~~~~~~~~^^^^^^^
+  File "/anvil/scratch/x-kjensen/flexicles/Haichao/ACCESS_benchmarks_2026/benchmarks/project.py", line 555, in Run
+    Run_implementation(jobs[communicator.partition], communicator)
+    ~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/anvil/scratch/x-kjensen/flexicles/Haichao/ACCESS_benchmarks_2026/benchmarks/project.py", line 496, in Run_implementation
+    TriArea = 4 * np.pi * R_vert_avg**2 / len(faces)
+                          ^^^^^^^^^^
+UnboundLocalError: cannot access local variable 'R_vert_avg' where it is not associated with a value
+Traceback (most recent call last):
+  File "/anvil/scratch/x-kjensen/flexicles/Haichao/ACCESS_benchmarks_2026/benchmarks/project.py", line 567, in <module>
+    globals()[args.action](*jobs)
+    ~~~~~~~~~~~~~~~~~~~~~~^^^^^^^
+  File "/anvil/scratch/x-kjensen/flexicles/Haichao/ACCESS_benchmarks_2026/benchmarks/project.py", line 555, in Run
+    Run_implementation(jobs[communicator.partition], communicator)
+    ~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/anvil/scratch/x-kjensen/flexicles/Haichao/ACCESS_benchmarks_2026/benchmarks/project.py", line 496, in Run_implementation
+    TriArea = 4 * np.pi * R_vert_avg**2 / len(faces)
+                          ^^^^^^^^^^
+UnboundLocalError: cannot access local variable 'R_vert_avg' where it is not associated with a value
+Traceback (most recent call last):
+Traceback (most recent call last):
+Traceback (most recent call last):
+Traceback (most recent call last):
+Traceback (most recent call last):
+Traceback (most recent call last):
+  File "/anvil/scratch/x-kjensen/flexicles/Haichao/ACCESS_benchmarks_2026/benchmarks/project.py", line 567, in <module>
+    globals()[args.action](*jobs)
+    ~~~~~~~~~~~~~~~~~~~~~~^^^^^^^
+  File "/anvil/scratch/x-kjensen/flexicles/Haichao/ACCESS_benchmarks_2026/benchmarks/project.py", line 555, in Run
+    Run_implementation(jobs[communicator.partition], communicator)
+    ~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+Traceback (most recent call last):
+Traceback (most recent call last):
+Traceback (most recent call last):
+Traceback (most recent call last):
+  File "/anvil/scratch/x-kjensen/flexicles/Haichao/ACCESS_benchmarks_2026/benchmarks/project.py", line 496, in Run_implementation
+    TriArea = 4 * np.pi * R_vert_avg**2 / len(faces)
+                          ^^^^^^^^^^
+UnboundLocalError: cannot access local variable 'R_vert_avg' where it is not associated with a value
+Traceback (most recent call last):
+Traceback (most recent call last):
+Traceback (most recent call last):
+  File "/anvil/scratch/x-kjensen/flexicles/Haichao/ACCESS_benchmarks_2026/benchmarks/project.py", line 567, in <module>
+    globals()[args.action](*jobs)
+    ~~~~~~~~~~~~~~~~~~~~~~^^^^^^^
+  File "/anvil/scratch/x-kjensen/flexicles/Haichao/ACCESS_benchmarks_2026/benchmarks/project.py", line 555, in Run
+    Run_implementation(jobs[communicator.partition], communicator)
+    ~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/anvil/scratch/x-kjensen/flexicles/Haichao/ACCESS_benchmarks_2026/benchmarks/project.py", line 496, in Run_implementation
+    TriArea = 4 * np.pi * R_vert_avg**2 / len(faces)
+                          ^^^^^^^^^^
+UnboundLocalError: cannot access local variable 'R_vert_avg' where it is not associated with a value
+Traceback (most recent call last):
+Traceback (most recent call last):
+Traceback (most recent call last):
+Traceback (most recent call last):
+Traceback (most recent call last):
+Traceback (most recent call last):
+Traceback (most recent call last):
+Traceback (most recent call last):
+Traceback (most recent call last):
+  File "/anvil/scratch/x-kjensen/flexicles/Haichao/ACCESS_benchmarks_2026/benchmarks/project.py", line 567, in <module>
+    globals()[args.action](*jobs)
+    ~~~~~~~~~~~~~~~~~~~~~~^^^^^^^
+  File "/anvil/scratch/x-kjensen/flexicles/Haichao/ACCESS_benchmarks_2026/benchmarks/project.py", line 555, in Run
+    Run_implementation(jobs[communicator.partition], communicator)
+    ~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/anvil/scratch/x-kjensen/flexicles/Haichao/ACCESS_benchmarks_2026/benchmarks/project.py", line 496, in Run_implementation
+    TriArea = 4 * np.pi * R_vert_avg**2 / len(faces)
+                          ^^^^^^^^^^
+UnboundLocalError: cannot access local variable 'R_vert_avg' where it is not associated with a value
+Traceback (most recent call last):
+  File "/anvil/scratch/x-kjensen/flexicles/Haichao/ACCESS_benchmarks_2026/benchmarks/project.py", line 567, in <module>
+    globals()[args.action](*jobs)
+    ~~~~~~~~~~~~~~~~~~~~~~^^^^^^^
+  File "/anvil/scratch/x-kjensen/flexicles/Haichao/ACCESS_benchmarks_2026/benchmarks/project.py", line 555, in Run
+    Run_implementation(jobs[communicator.partition], communicator)
+    ~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/anvil/scratch/x-kjensen/flexicles/Haichao/ACCESS_benchmarks_2026/benchmarks/project.py", line 496, in Run_implementation
+    TriArea = 4 * np.pi * R_vert_avg**2 / len(faces)
+                          ^^^^^^^^^^
+UnboundLocalError: cannot access local variable 'R_vert_avg' where it is not associated with a value
+  File "/anvil/scratch/x-kjensen/flexicles/Haichao/ACCESS_benchmarks_2026/benchmarks/project.py", line 567, in <module>
+    globals()[args.action](*jobs)
+    ~~~~~~~~~~~~~~~~~~~~~~^^^^^^^
+  File "/anvil/scratch/x-kjensen/flexicles/Haichao/ACCESS_benchmarks_2026/benchmarks/project.py", line 555, in Run
+    Run_implementation(jobs[communicator.partition], communicator)
+    ~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/anvil/scratch/x-kjensen/flexicles/Haichao/ACCESS_benchmarks_2026/benchmarks/project.py", line 496, in Run_implementation
+    TriArea = 4 * np.pi * R_vert_avg**2 / len(faces)
+                          ^^^^^^^^^^
+  File "/anvil/scratch/x-kjensen/flexicles/Haichao/ACCESS_benchmarks_2026/benchmarks/project.py", line 567, in <module>
+    globals()[args.action](*jobs)
+    ~~~~~~~~~~~~~~~~~~~~~~^^^^^^^
+  File "/anvil/scratch/x-kjensen/flexicles/Haichao/ACCESS_benchmarks_2026/benchmarks/project.py", line 555, in Run
+    Run_implementation(jobs[communicator.partition], communicator)
+    ~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/anvil/scratch/x-kjensen/flexicles/Haichao/ACCESS_benchmarks_2026/benchmarks/project.py", line 496, in Run_implementation
+    TriArea = 4 * np.pi * R_vert_avg**2 / len(faces)
+                          ^^^^^^^^^^
+UnboundLocalError: cannot access local variable 'R_vert_avg' where it is not associated with a value
+  File "/anvil/scratch/x-kjensen/flexicles/Haichao/ACCESS_benchmarks_2026/benchmarks/project.py", line 567, in <module>
+    globals()[args.action](*jobs)
+    ~~~~~~~~~~~~~~~~~~~~~~^^^^^^^
+  File "/anvil/scratch/x-kjensen/flexicles/Haichao/ACCESS_benchmarks_2026/benchmarks/project.py", line 555, in Run
+    Run_implementation(jobs[communicator.partition], communicator)
+    ~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/anvil/scratch/x-kjensen/flexicles/Haichao/ACCESS_benchmarks_2026/benchmarks/project.py", line 496, in Run_implementation
+    TriArea = 4 * np.pi * R_vert_avg**2 / len(faces)
+                          ^^^^^^^^^^
+UnboundLocalError: cannot access local variable 'R_vert_avg' where it is not associated with a value
+  File "/anvil/scratch/x-kjensen/flexicles/Haichao/ACCESS_benchmarks_2026/benchmarks/project.py", line 567, in <module>
+    globals()[args.action](*jobs)
+    ~~~~~~~~~~~~~~~~~~~~~~^^^^^^^
+  File "/anvil/scratch/x-kjensen/flexicles/Haichao/ACCESS_benchmarks_2026/benchmarks/project.py", line 555, in Run
+    Run_implementation(jobs[communicator.partition], communicator)
+    ~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/anvil/scratch/x-kjensen/flexicles/Haichao/ACCESS_benchmarks_2026/benchmarks/project.py", line 496, in Run_implementation
+    TriArea = 4 * np.pi * R_vert_avg**2 / len(faces)
+                          ^^^^^^^^^^
+UnboundLocalError: cannot access local variable 'R_vert_avg' where it is not associated with a value
+Traceback (most recent call last):
+UnboundLocalError: cannot access local variable 'R_vert_avg' where it is not associated with a value
+  File "/anvil/scratch/x-kjensen/flexicles/Haichao/ACCESS_benchmarks_2026/benchmarks/project.py", line 567, in <module>
+    globals()[args.action](*jobs)
+    ~~~~~~~~~~~~~~~~~~~~~~^^^^^^^
+  File "/anvil/scratch/x-kjensen/flexicles/Haichao/ACCESS_benchmarks_2026/benchmarks/project.py", line 555, in Run
+    Run_implementation(jobs[communicator.partition], communicator)
+    ~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/anvil/scratch/x-kjensen/flexicles/Haichao/ACCESS_benchmarks_2026/benchmarks/project.py", line 496, in Run_implementation
+    TriArea = 4 * np.pi * R_vert_avg**2 / len(faces)
+                          ^^^^^^^^^^
+UnboundLocalError: cannot access local variable 'R_vert_avg' where it is not associated with a value
+  File "/anvil/scratch/x-kjensen/flexicles/Haichao/ACCESS_benchmarks_2026/benchmarks/project.py", line 567, in <module>
+    globals()[args.action](*jobs)
+    ~~~~~~~~~~~~~~~~~~~~~~^^^^^^^
+  File "/anvil/scratch/x-kjensen/flexicles/Haichao/ACCESS_benchmarks_2026/benchmarks/project.py", line 555, in Run
+    Run_implementation(jobs[communicator.partition], communicator)
+    ~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/anvil/scratch/x-kjensen/flexicles/Haichao/ACCESS_benchmarks_2026/benchmarks/project.py", line 496, in Run_implementation
+    TriArea = 4 * np.pi * R_vert_avg**2 / len(faces)
+                          ^^^^^^^^^^
+  File "/anvil/scratch/x-kjensen/flexicles/Haichao/ACCESS_benchmarks_2026/benchmarks/project.py", line 567, in <module>
+    globals()[args.action](*jobs)
+    ~~~~~~~~~~~~~~~~~~~~~~^^^^^^^
+  File "/anvil/scratch/x-kjensen/flexicles/Haichao/ACCESS_benchmarks_2026/benchmarks/project.py", line 555, in Run
+    Run_implementation(jobs[communicator.partition], communicator)
+    ~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/anvil/scratch/x-kjensen/flexicles/Haichao/ACCESS_benchmarks_2026/benchmarks/project.py", line 496, in Run_implementation
+    TriArea = 4 * np.pi * R_vert_avg**2 / len(faces)
+                          ^^^^^^^^^^
+UnboundLocalError: cannot access local variable 'R_vert_avg' where it is not associated with a value
+  File "/anvil/scratch/x-kjensen/flexicles/Haichao/ACCESS_benchmarks_2026/benchmarks/project.py", line 567, in <module>
+    globals()[args.action](*jobs)
+    ~~~~~~~~~~~~~~~~~~~~~~^^^^^^^
+  File "/anvil/scratch/x-kjensen/flexicles/Haichao/ACCESS_benchmarks_2026/benchmarks/project.py", line 555, in Run
+    Run_implementation(jobs[communicator.partition], communicator)
+    ~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+UnboundLocalError: cannot access local variable 'R_vert_avg' where it is not associated with a value
+Traceback (most recent call last):
+  File "/anvil/scratch/x-kjensen/flexicles/Haichao/ACCESS_benchmarks_2026/benchmarks/project.py", line 567, in <module>
+    globals()[args.action](*jobs)
+    ~~~~~~~~~~~~~~~~~~~~~~^^^^^^^
+  File "/anvil/scratch/x-kjensen/flexicles/Haichao/ACCESS_benchmarks_2026/benchmarks/project.py", line 555, in Run
+    Run_implementation(jobs[communicator.partition], communicator)
+    ~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/anvil/scratch/x-kjensen/flexicles/Haichao/ACCESS_benchmarks_2026/benchmarks/project.py", line 496, in Run_implementation
+    TriArea = 4 * np.pi * R_vert_avg**2 / len(faces)
+                          ^^^^^^^^^^
+  File "/anvil/scratch/x-kjensen/flexicles/Haichao/ACCESS_benchmarks_2026/benchmarks/project.py", line 567, in <module>
+    globals()[args.action](*jobs)
+    ~~~~~~~~~~~~~~~~~~~~~~^^^^^^^
+  File "/anvil/scratch/x-kjensen/flexicles/Haichao/ACCESS_benchmarks_2026/benchmarks/project.py", line 555, in Run
+    Run_implementation(jobs[communicator.partition], communicator)
+    ~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/anvil/scratch/x-kjensen/flexicles/Haichao/ACCESS_benchmarks_2026/benchmarks/project.py", line 496, in Run_implementation
+    TriArea = 4 * np.pi * R_vert_avg**2 / len(faces)
+                          ^^^^^^^^^^
+  File "/anvil/scratch/x-kjensen/flexicles/Haichao/ACCESS_benchmarks_2026/benchmarks/project.py", line 567, in <module>
+    globals()[args.action](*jobs)
+    ~~~~~~~~~~~~~~~~~~~~~~^^^^^^^
+  File "/anvil/scratch/x-kjensen/flexicles/Haichao/ACCESS_benchmarks_2026/benchmarks/project.py", line 555, in Run
+    Run_implementation(jobs[communicator.partition], communicator)
+    ~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/anvil/scratch/x-kjensen/flexicles/Haichao/ACCESS_benchmarks_2026/benchmarks/project.py", line 496, in Run_implementation
+    TriArea = 4 * np.pi * R_vert_avg**2 / len(faces)
+                          ^^^^^^^^^^
+UnboundLocalError: cannot access local variable 'R_vert_avg' where it is not associated with a value
+  File "/anvil/scratch/x-kjensen/flexicles/Haichao/ACCESS_benchmarks_2026/benchmarks/project.py", line 567, in <module>
+    globals()[args.action](*jobs)
+    ~~~~~~~~~~~~~~~~~~~~~~^^^^^^^
+  File "/anvil/scratch/x-kjensen/flexicles/Haichao/ACCESS_benchmarks_2026/benchmarks/project.py", line 555, in Run
+    Run_implementation(jobs[communicator.partition], communicator)
+    ~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/anvil/scratch/x-kjensen/flexicles/Haichao/ACCESS_benchmarks_2026/benchmarks/project.py", line 496, in Run_implementation
+    TriArea = 4 * np.pi * R_vert_avg**2 / len(faces)
+                          ^^^^^^^^^^
+UnboundLocalError: cannot access local variable 'R_vert_avg' where it is not associated with a value
+  File "/anvil/scratch/x-kjensen/flexicles/Haichao/ACCESS_benchmarks_2026/benchmarks/project.py", line 496, in Run_implementation
+    TriArea = 4 * np.pi * R_vert_avg**2 / len(faces)
+                          ^^^^^^^^^^
+UnboundLocalError: cannot access local variable 'R_vert_avg' where it is not associated with a value
+  File "/anvil/scratch/x-kjensen/flexicles/Haichao/ACCESS_benchmarks_2026/benchmarks/project.py", line 567, in <module>
+    globals()[args.action](*jobs)
+    ~~~~~~~~~~~~~~~~~~~~~~^^^^^^^
+  File "/anvil/scratch/x-kjensen/flexicles/Haichao/ACCESS_benchmarks_2026/benchmarks/project.py", line 555, in Run
+    Run_implementation(jobs[communicator.partition], communicator)
+    ~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/anvil/scratch/x-kjensen/flexicles/Haichao/ACCESS_benchmarks_2026/benchmarks/project.py", line 496, in Run_implementation
+    TriArea = 4 * np.pi * R_vert_avg**2 / len(faces)
+                          ^^^^^^^^^^
+UnboundLocalError: cannot access local variable 'R_vert_avg' where it is not associated with a value
+UnboundLocalError: cannot access local variable 'R_vert_avg' where it is not associated with a value
+  File "/anvil/scratch/x-kjensen/flexicles/Haichao/ACCESS_benchmarks_2026/benchmarks/project.py", line 567, in <module>
+    globals()[args.action](*jobs)
+    ~~~~~~~~~~~~~~~~~~~~~~^^^^^^^
+  File "/anvil/scratch/x-kjensen/flexicles/Haichao/ACCESS_benchmarks_2026/benchmarks/project.py", line 555, in Run
+    Run_implementation(jobs[communicator.partition], communicator)
+    ~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/anvil/scratch/x-kjensen/flexicles/Haichao/ACCESS_benchmarks_2026/benchmarks/project.py", line 496, in Run_implementation
+    TriArea = 4 * np.pi * R_vert_avg**2 / len(faces)
+                          ^^^^^^^^^^
+UnboundLocalError: cannot access local variable 'R_vert_avg' where it is not associated with a value
+UnboundLocalError: cannot access local variable 'R_vert_avg' where it is not associated with a value
+  File "/anvil/scratch/x-kjensen/flexicles/Haichao/ACCESS_benchmarks_2026/benchmarks/project.py", line 567, in <module>
+    globals()[args.action](*jobs)
+    ~~~~~~~~~~~~~~~~~~~~~~^^^^^^^
+  File "/anvil/scratch/x-kjensen/flexicles/Haichao/ACCESS_benchmarks_2026/benchmarks/project.py", line 555, in Run
+    Run_implementation(jobs[communicator.partition], communicator)
+    ~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/anvil/scratch/x-kjensen/flexicles/Haichao/ACCESS_benchmarks_2026/benchmarks/project.py", line 496, in Run_implementation
+    TriArea = 4 * np.pi * R_vert_avg**2 / len(faces)
+                          ^^^^^^^^^^
+  File "/anvil/scratch/x-kjensen/flexicles/Haichao/ACCESS_benchmarks_2026/benchmarks/project.py", line 567, in <module>
+    globals()[args.action](*jobs)
+    ~~~~~~~~~~~~~~~~~~~~~~^^^^^^^
+  File "/anvil/scratch/x-kjensen/flexicles/Haichao/ACCESS_benchmarks_2026/benchmarks/project.py", line 555, in Run
+    Run_implementation(jobs[communicator.partition], communicator)
+    ~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/anvil/scratch/x-kjensen/flexicles/Haichao/ACCESS_benchmarks_2026/benchmarks/project.py", line 496, in Run_implementation
+    TriArea = 4 * np.pi * R_vert_avg**2 / len(faces)
+                          ^^^^^^^^^^
+  File "/anvil/scratch/x-kjensen/flexicles/Haichao/ACCESS_benchmarks_2026/benchmarks/project.py", line 567, in <module>
+    globals()[args.action](*jobs)
+    ~~~~~~~~~~~~~~~~~~~~~~^^^^^^^
+  File "/anvil/scratch/x-kjensen/flexicles/Haichao/ACCESS_benchmarks_2026/benchmarks/project.py", line 555, in Run
+    Run_implementation(jobs[communicator.partition], communicator)
+    ~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/anvil/scratch/x-kjensen/flexicles/Haichao/ACCESS_benchmarks_2026/benchmarks/project.py", line 496, in Run_implementation
+    TriArea = 4 * np.pi * R_vert_avg**2 / len(faces)
+                          ^^^^^^^^^^
+UnboundLocalError: cannot access local variable 'R_vert_avg' where it is not associated with a value
+  File "/anvil/scratch/x-kjensen/flexicles/Haichao/ACCESS_benchmarks_2026/benchmarks/project.py", line 567, in <module>
+    globals()[args.action](*jobs)
+    ~~~~~~~~~~~~~~~~~~~~~~^^^^^^^
+  File "/anvil/scratch/x-kjensen/flexicles/Haichao/ACCESS_benchmarks_2026/benchmarks/project.py", line 555, in Run
+    Run_implementation(jobs[communicator.partition], communicator)
+    ~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/anvil/scratch/x-kjensen/flexicles/Haichao/ACCESS_benchmarks_2026/benchmarks/project.py", line 496, in Run_implementation
+    TriArea = 4 * np.pi * R_vert_avg**2 / len(faces)
+                          ^^^^^^^^^^
+  File "/anvil/scratch/x-kjensen/flexicles/Haichao/ACCESS_benchmarks_2026/benchmarks/project.py", line 567, in <module>
+    globals()[args.action](*jobs)
+    ~~~~~~~~~~~~~~~~~~~~~~^^^^^^^
+  File "/anvil/scratch/x-kjensen/flexicles/Haichao/ACCESS_benchmarks_2026/benchmarks/project.py", line 555, in Run
+    Run_implementation(jobs[communicator.partition], communicator)
+    ~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/anvil/scratch/x-kjensen/flexicles/Haichao/ACCESS_benchmarks_2026/benchmarks/project.py", line 496, in Run_implementation
+    TriArea = 4 * np.pi * R_vert_avg**2 / len(faces)
+                          ^^^^^^^^^^
+UnboundLocalError: cannot access local variable 'R_vert_avg' where it is not associated with a value
+UnboundLocalError: cannot access local variable 'R_vert_avg' where it is not associated with a value
+UnboundLocalError: cannot access local variable 'R_vert_avg' where it is not associated with a value
+  File "/anvil/scratch/x-kjensen/flexicles/Haichao/ACCESS_benchmarks_2026/benchmarks/project.py", line 567, in <module>
+    globals()[args.action](*jobs)
+    ~~~~~~~~~~~~~~~~~~~~~~^^^^^^^
+  File "/anvil/scratch/x-kjensen/flexicles/Haichao/ACCESS_benchmarks_2026/benchmarks/project.py", line 555, in Run
+    Run_implementation(jobs[communicator.partition], communicator)
+    ~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/anvil/scratch/x-kjensen/flexicles/Haichao/ACCESS_benchmarks_2026/benchmarks/project.py", line 496, in Run_implementation
+    TriArea = 4 * np.pi * R_vert_avg**2 / len(faces)
+                          ^^^^^^^^^^
+UnboundLocalError: cannot access local variable 'R_vert_avg' where it is not associated with a value
+UnboundLocalError: cannot access local variable 'R_vert_avg' where it is not associated with a value
+  File "/anvil/scratch/x-kjensen/flexicles/Haichao/ACCESS_benchmarks_2026/benchmarks/project.py", line 567, in <module>
+    globals()[args.action](*jobs)
+    ~~~~~~~~~~~~~~~~~~~~~~^^^^^^^
+  File "/anvil/scratch/x-kjensen/flexicles/Haichao/ACCESS_benchmarks_2026/benchmarks/project.py", line 555, in Run
+    Run_implementation(jobs[communicator.partition], communicator)
+    ~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/anvil/scratch/x-kjensen/flexicles/Haichao/ACCESS_benchmarks_2026/benchmarks/project.py", line 496, in Run_implementation
+    TriArea = 4 * np.pi * R_vert_avg**2 / len(faces)
+                          ^^^^^^^^^^
+UnboundLocalError: cannot access local variable 'R_vert_avg' where it is not associated with a value
+  File "/anvil/scratch/x-kjensen/flexicles/Haichao/ACCESS_benchmarks_2026/benchmarks/project.py", line 567, in <module>
+    globals()[args.action](*jobs)
+    ~~~~~~~~~~~~~~~~~~~~~~^^^^^^^
+  File "/anvil/scratch/x-kjensen/flexicles/Haichao/ACCESS_benchmarks_2026/benchmarks/project.py", line 555, in Run
+    Run_implementation(jobs[communicator.partition], communicator)
+    ~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/anvil/scratch/x-kjensen/flexicles/Haichao/ACCESS_benchmarks_2026/benchmarks/project.py", line 496, in Run_implementation
+    TriArea = 4 * np.pi * R_vert_avg**2 / len(faces)
+                          ^^^^^^^^^^
+UnboundLocalError: cannot access local variable 'R_vert_avg' where it is not associated with a value
+  File "/anvil/scratch/x-kjensen/flexicles/Haichao/ACCESS_benchmarks_2026/benchmarks/project.py", line 555, in Run
+    Run_implementation(jobs[communicator.partition], communicator)
+    ~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/anvil/scratch/x-kjensen/flexicles/Haichao/ACCESS_benchmarks_2026/benchmarks/project.py", line 496, in Run_implementation
+    TriArea = 4 * np.pi * R_vert_avg**2 / len(faces)
+                          ^^^^^^^^^^
+UnboundLocalError: cannot access local variable 'R_vert_avg' where it is not associated with a value
+  File "/anvil/scratch/x-kjensen/flexicles/Haichao/ACCESS_benchmarks_2026/benchmarks/project.py", line 567, in <module>
+    globals()[args.action](*jobs)
+    ~~~~~~~~~~~~~~~~~~~~~~^^^^^^^
+  File "/anvil/scratch/x-kjensen/flexicles/Haichao/ACCESS_benchmarks_2026/benchmarks/project.py", line 555, in Run
+    Run_implementation(jobs[communicator.partition], communicator)
+    ~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/anvil/scratch/x-kjensen/flexicles/Haichao/ACCESS_benchmarks_2026/benchmarks/project.py", line 496, in Run_implementation
+    TriArea = 4 * np.pi * R_vert_avg**2 / len(faces)
+                          ^^^^^^^^^^
+UnboundLocalError: cannot access local variable 'R_vert_avg' where it is not associated with a value
+--------------------------------------------------------------------------
+MPI_ABORT was invoked on rank 2 in communicator MPI_COMM_WORLD
+with errorcode 1.
+
+NOTE: invoking MPI_ABORT causes Open MPI to kill all MPI processes.
+You may or may not see output from other processes, depending on
+exactly when Open MPI kills them.
+--------------------------------------------------------------------------
+--------------------------------------------------------------------------
+MPI_ABORT was invoked on rank 11 in communicator MPI_COMM_WORLD
+with errorcode 1.
+
+NOTE: invoking MPI_ABORT causes Open MPI to kill all MPI processes.
+You may or may not see output from other processes, depending on
+exactly when Open MPI kills them.
+--------------------------------------------------------------------------
+--------------------------------------------------------------------------
+MPI_ABORT was invoked on rank 12 in communicator MPI_COMM_WORLD
+with errorcode 1.
+
+NOTE: invoking MPI_ABORT causes Open MPI to kill all MPI processes.
+You may or may not see output from other processes, depending on
+exactly when Open MPI kills them.
+--------------------------------------------------------------------------
+--------------------------------------------------------------------------
+MPI_ABORT was invoked on rank 21 in communicator MPI_COMM_WORLD
+with errorcode 1.
+
+NOTE: invoking MPI_ABORT causes Open MPI to kill all MPI processes.
+You may or may not see output from other processes, depending on
+exactly when Open MPI kills them.
+--------------------------------------------------------------------------
+--------------------------------------------------------------------------
+MPI_ABORT was invoked on rank 6 in communicator MPI_COMM_WORLD
+with errorcode 1.
+
+NOTE: invoking MPI_ABORT causes Open MPI to kill all MPI processes.
+You may or may not see output from other processes, depending on
+exactly when Open MPI kills them.
+--------------------------------------------------------------------------
+--------------------------------------------------------------------------
+MPI_ABORT was invoked on rank 9 in communicator MPI_COMM_WORLD
+with errorcode 1.
+
+NOTE: invoking MPI_ABORT causes Open MPI to kill all MPI processes.
+You may or may not see output from other processes, depending on
+exactly when Open MPI kills them.
+--------------------------------------------------------------------------
+--------------------------------------------------------------------------
+MPI_ABORT was invoked on rank 13 in communicator MPI_COMM_WORLD
+with errorcode 1.
+
+NOTE: invoking MPI_ABORT causes Open MPI to kill all MPI processes.
+You may or may not see output from other processes, depending on
+exactly when Open MPI kills them.
+--------------------------------------------------------------------------
+--------------------------------------------------------------------------
+MPI_ABORT was invoked on rank 15 in communicator MPI_COMM_WORLD
+with errorcode 1.
+
+NOTE: invoking MPI_ABORT causes Open MPI to kill all MPI processes.
+You may or may not see output from other processes, depending on
+exactly when Open MPI kills them.
+--------------------------------------------------------------------------
+--------------------------------------------------------------------------
+MPI_ABORT was invoked on rank 18 in communicator MPI_COMM_WORLD
+with errorcode 1.
+
+NOTE: invoking MPI_ABORT causes Open MPI to kill all MPI processes.
+You may or may not see output from other processes, depending on
+exactly when Open MPI kills them.
+--------------------------------------------------------------------------
+--------------------------------------------------------------------------
+MPI_ABORT was invoked on rank 20 in communicator MPI_COMM_WORLD
+with errorcode 1.
+
+NOTE: invoking MPI_ABORT causes Open MPI to kill all MPI processes.
+You may or may not see output from other processes, depending on
+exactly when Open MPI kills them.
+--------------------------------------------------------------------------
+--------------------------------------------------------------------------
+MPI_ABORT was invoked on rank 25 in communicator MPI_COMM_WORLD
+with errorcode 1.
+
+NOTE: invoking MPI_ABORT causes Open MPI to kill all MPI processes.
+You may or may not see output from other processes, depending on
+exactly when Open MPI kills them.
+--------------------------------------------------------------------------
+--------------------------------------------------------------------------
+MPI_ABORT was invoked on rank 26 in communicator MPI_COMM_WORLD
+with errorcode 1.
+
+NOTE: invoking MPI_ABORT causes Open MPI to kill all MPI processes.
+You may or may not see output from other processes, depending on
+exactly when Open MPI kills them.
+--------------------------------------------------------------------------
+--------------------------------------------------------------------------
+MPI_ABORT was invoked on rank 28 in communicator MPI_COMM_WORLD
+with errorcode 1.
+
+NOTE: invoking MPI_ABORT causes Open MPI to kill all MPI processes.
+You may or may not see output from other processes, depending on
+exactly when Open MPI kills them.
+--------------------------------------------------------------------------
+--------------------------------------------------------------------------
+MPI_ABORT was invoked on rank 3 in communicator MPI_COMM_WORLD
+with errorcode 1.
+
+NOTE: invoking MPI_ABORT causes Open MPI to kill all MPI processes.
+You may or may not see output from other processes, depending on
+exactly when Open MPI kills them.
+--------------------------------------------------------------------------
+--------------------------------------------------------------------------
+MPI_ABORT was invoked on rank 4 in communicator MPI_COMM_WORLD
+with errorcode 1.
+
+NOTE: invoking MPI_ABORT causes Open MPI to kill all MPI processes.
+You may or may not see output from other processes, depending on
+exactly when Open MPI kills them.
+--------------------------------------------------------------------------
+--------------------------------------------------------------------------
+MPI_ABORT was invoked on rank 5 in communicator MPI_COMM_WORLD
+with errorcode 1.
+
+NOTE: invoking MPI_ABORT causes Open MPI to kill all MPI processes.
+You may or may not see output from other processes, depending on
+exactly when Open MPI kills them.
+--------------------------------------------------------------------------
+--------------------------------------------------------------------------
+MPI_ABORT was invoked on rank 7 in communicator MPI_COMM_WORLD
+with errorcode 1.
+
+NOTE: invoking MPI_ABORT causes Open MPI to kill all MPI processes.
+You may or may not see output from other processes, depending on
+exactly when Open MPI kills them.
+--------------------------------------------------------------------------
+--------------------------------------------------------------------------
+MPI_ABORT was invoked on rank 10 in communicator MPI_COMM_WORLD
+with errorcode 1.
+
+NOTE: invoking MPI_ABORT causes Open MPI to kill all MPI processes.
+You may or may not see output from other processes, depending on
+exactly when Open MPI kills them.
+--------------------------------------------------------------------------
+--------------------------------------------------------------------------
+MPI_ABORT was invoked on rank 17 in communicator MPI_COMM_WORLD
+with errorcode 1.
+
+NOTE: invoking MPI_ABORT causes Open MPI to kill all MPI processes.
+You may or may not see output from other processes, depending on
+exactly when Open MPI kills them.
+--------------------------------------------------------------------------
+--------------------------------------------------------------------------
+MPI_ABORT was invoked on rank 30 in communicator MPI_COMM_WORLD
+with errorcode 1.
+
+NOTE: invoking MPI_ABORT causes Open MPI to kill all MPI processes.
+You may or may not see output from other processes, depending on
+exactly when Open MPI kills them.
+--------------------------------------------------------------------------
+--------------------------------------------------------------------------
+MPI_ABORT was invoked on rank 1 in communicator MPI_COMM_WORLD
+with errorcode 1.
+
+NOTE: invoking MPI_ABORT causes Open MPI to kill all MPI processes.
+You may or may not see output from other processes, depending on
+exactly when Open MPI kills them.
+--------------------------------------------------------------------------
+--------------------------------------------------------------------------
+MPI_ABORT was invoked on rank 8 in communicator MPI_COMM_WORLD
+with errorcode 1.
+
+NOTE: invoking MPI_ABORT causes Open MPI to kill all MPI processes.
+You may or may not see output from other processes, depending on
+exactly when Open MPI kills them.
+--------------------------------------------------------------------------
+--------------------------------------------------------------------------
+MPI_ABORT was invoked on rank 14 in communicator MPI_COMM_WORLD
+with errorcode 1.
+
+NOTE: invoking MPI_ABORT causes Open MPI to kill all MPI processes.
+You may or may not see output from other processes, depending on
+exactly when Open MPI kills them.
+--------------------------------------------------------------------------
+--------------------------------------------------------------------------
+MPI_ABORT was invoked on rank 24 in communicator MPI_COMM_WORLD
+with errorcode 1.
+
+NOTE: invoking MPI_ABORT causes Open MPI to kill all MPI processes.
+You may or may not see output from other processes, depending on
+exactly when Open MPI kills them.
+--------------------------------------------------------------------------
+--------------------------------------------------------------------------
+MPI_ABORT was invoked on rank 27 in communicator MPI_COMM_WORLD
+with errorcode 1.
+
+NOTE: invoking MPI_ABORT causes Open MPI to kill all MPI processes.
+You may or may not see output from other processes, depending on
+exactly when Open MPI kills them.
+--------------------------------------------------------------------------
+--------------------------------------------------------------------------
+MPI_ABORT was invoked on rank 29 in communicator MPI_COMM_WORLD
+with errorcode 1.
+
+NOTE: invoking MPI_ABORT causes Open MPI to kill all MPI processes.
+You may or may not see output from other processes, depending on
+exactly when Open MPI kills them.
+--------------------------------------------------------------------------
+--------------------------------------------------------------------------
+MPI_ABORT was invoked on rank 31 in communicator MPI_COMM_WORLD
+with errorcode 1.
+
+NOTE: invoking MPI_ABORT causes Open MPI to kill all MPI processes.
+You may or may not see output from other processes, depending on
+exactly when Open MPI kills them.
+--------------------------------------------------------------------------
+--------------------------------------------------------------------------
+MPI_ABORT was invoked on rank 16 in communicator MPI_COMM_WORLD
+with errorcode 1.
+
+NOTE: invoking MPI_ABORT causes Open MPI to kill all MPI processes.
+You may or may not see output from other processes, depending on
+exactly when Open MPI kills them.
+--------------------------------------------------------------------------
+--------------------------------------------------------------------------
+MPI_ABORT was invoked on rank 22 in communicator MPI_COMM_WORLD
+with errorcode 1.
+
+NOTE: invoking MPI_ABORT causes Open MPI to kill all MPI processes.
+You may or may not see output from other processes, depending on
+exactly when Open MPI kills them.
+--------------------------------------------------------------------------
+--------------------------------------------------------------------------
+MPI_ABORT was invoked on rank 19 in communicator MPI_COMM_WORLD
+with errorcode 1.
+
+NOTE: invoking MPI_ABORT causes Open MPI to kill all MPI processes.
+You may or may not see output from other processes, depending on
+exactly when Open MPI kills them.
+--------------------------------------------------------------------------
+srun: Job step aborted: Waiting up to 32 seconds for job step to finish.
+--------------------------------------------------------------------------
+MPI_ABORT was invoked on rank 23 in communicator MPI_COMM_WORLD
+with errorcode 1.
+
+NOTE: invoking MPI_ABORT causes Open MPI to kill all MPI processes.
+You may or may not see output from other processes, depending on
+exactly when Open MPI kills them.
+--------------------------------------------------------------------------
+[2026-01-26T22:48:40.024] error: *** STEP 14977484.0 ON a243 CANCELLED AT 2026-01-26T22:48:40 DUE to SIGNAL Killed ***
+srun: error: a243: tasks 0-31: Killed
+[row] Error executing command.

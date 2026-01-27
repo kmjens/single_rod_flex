@@ -62,7 +62,7 @@ def Run_implementation(job, communicator):
     SA_flex = 4 * np.pi * R**2
     num_tri = int(SA_flex/ TriArea)
     N_mesh = num_tri + 2
-    k_bend = SP.k_bend_eff * N_flex / SA_flex
+    k_bend = SP.k_bend
     N_particles = N_mesh + N_active + N_bead + N_flattener
     
     # Active, buoyant, and gravitational forces
@@ -301,7 +301,7 @@ def Run_implementation(job, communicator):
     integrator.forces.append(ExpLJ)
 
     # Apply tethering potential to mesh:
-    l_min, l_c1, l_c0, l_max = get_tether_params(frame, triangle_tags)
+    l_min, l_c1, l_c0, l_max = get_tether_params(mesh, triangle_tags)
 
     mesh_bond_potential = hoomd.md.mesh.bond.Tether(mesh_obj)
     mesh_bond_potential.params["mesh"] = dict(
@@ -429,7 +429,7 @@ def Run_implementation(job, communicator):
     print('step: ', sim.timestep)
 
     print('\nCurrent state:')
-    print_state(sigma, mesh_sigma, flattener_sigma, N_particles, num_flattener, N_active, num_beads, bead_spacing, N_mesh, SP.k_bend_eff, k_bend, R, SP.aspect_rat, SP.length_rat, Pe, deltas, SP.torque_mag, mass_mesh_bead, mass_rod, F_const_rod, F_const_mesh, job)
+    print_state(sigma, mesh_sigma, flattener_sigma, N_particles, num_flattener, N_active, num_beads, bead_spacing, N_mesh, k_bend, R, SP.aspect_rat, SP.length_rat, Pe, deltas, SP.torque_mag, mass_mesh_bead, mass_rod, F_const_rod, F_const_mesh, job)
 
     
     os.rename(job.fn('Initialization.out.in_progress'), job.fn('Initilization.out'))
