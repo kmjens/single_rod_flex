@@ -56,13 +56,13 @@ def Run_implementation(job, communicator):
     cylinder_vol = rod_length * np.pi * (sigma / 2) ** 2
     vol_diff     = cylinder_vol - sphero_vol
     R            = (SP.length_rat * rod_length) / 2
-    L            = R * 5 *4 # box size
+    L            = R * 8 # box size
 
     TriArea = SP.TriArea
     SA_flex = 4 * np.pi * R**2
     num_tri = int(SA_flex/ TriArea)
     N_mesh = num_tri + 2
-    k_bend = SP.k_bend_eff * N_flex / SA_flex
+    k_bend = SP.k_bend
     N_particles = N_mesh + N_active + N_bead + N_flattener
     
     # Active, buoyant, and gravitational forces
@@ -365,7 +365,6 @@ def Run_implementation(job, communicator):
     print('Successfully ran for 0 timestep.\n')
 
     snap = sim.state.get_snapshot()
-    print('particle size:', snap.particles.diameter)
 
     print('Equilibrating mesh...')
     sim.run(5000)
@@ -400,8 +399,8 @@ def Run_implementation(job, communicator):
     ## Run the simulation
     #############################################
     print('\nFinish equilibrating simulation...')
-    while sim.timestep < (SP.equiltime - 1000):
-        sim.run(1000)
+    while sim.timestep < (SP.equiltime - 10000):
+        sim.run(10000)
         gsd_oper.flush()
         print('step: ', sim.timestep)
 
@@ -429,7 +428,7 @@ def Run_implementation(job, communicator):
     print('step: ', sim.timestep)
 
     print('\nCurrent state:')
-    print_state(sigma, mesh_sigma, flattener_sigma, N_particles, num_flattener, N_active, num_beads, bead_spacing, N_mesh, SP.k_bend_eff, k_bend, R, SP.aspect_rat, SP.length_rat, Pe, deltas, SP.torque_mag, mass_mesh_bead, mass_rod, F_const_rod, F_const_mesh, job)
+    print_state(sigma, mesh_sigma, flattener_sigma, N_particles, num_flattener, N_active, num_beads, bead_spacing, N_mesh, k_bend, R, SP.aspect_rat, SP.length_rat, Pe, deltas, SP.torque_mag, mass_mesh_bead, mass_rod, F_const_rod, F_const_mesh, job)
 
     
     os.rename(job.fn('Initialization.out.in_progress'), job.fn('Initilization.out'))

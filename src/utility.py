@@ -34,11 +34,11 @@ class JobParser:
         self.runtime     = job.cached_statepoint['runtime']
         self.equiltime   = job.cached_statepoint['equiltime']
 
+        self.k_bend   = job.cached_statepoint['k_bend']
         self.k_bond   = 4 * self.k_bend # based on general ratio lipid bilayers have
         self.k_area_f = job.cached_statepoint['k_area_f']
         self.k_area_i = job.cached_statepoint['k_area_i']
         self.TriArea  = job.cached_statepoint['TriArea']
-        self.k_bend_eff   = job.cached_statepoint['k_bend_eff']
 
         # Particle and mesh size scaling:
         self.aspect_rat      = job.cached_statepoint['aspect_rat'] # aspect ratio of rod length to diam
@@ -326,7 +326,7 @@ def get_tether_params(frame, triangle_tags):
 
     return(l_min, l_c1, l_c0, l_max)
 
-def print_state(sigma, mesh_sigma, flattener_sigma, N_particles,  num_flattener, N_active, num_beads, bead_spacing, N_mesh, k_bend_eff, k_bend, R, aspect_rat, length_rat, Pe, deltas, torque_mag, mass_mesh_bead, mass_rod, F_const_rod, F_const_mesh, job):
+def print_state(sigma, mesh_sigma, flattener_sigma, N_particles,  num_flattener, N_active, num_beads, bead_spacing, N_mesh, k_bend, R, aspect_rat, length_rat, Pe, deltas, torque_mag, mass_mesh_bead, mass_rod, F_const_rod, F_const_mesh, job):
     print('sigma: ', sigma)
     print('mesh_sigma: ', mesh_sigma)
     print('flattener_sigma: ', flattener_sigma)
@@ -338,7 +338,6 @@ def print_state(sigma, mesh_sigma, flattener_sigma, N_particles,  num_flattener,
     print('num_beads: ', num_beads)
     print('bead_spacing:', bead_spacing)
     print('N_mesh: ', N_mesh)
-    print('k_bend_eff: ', k_bend_eff)
     print('k_bend', k_bend)
     print('mesh R: ', R)
     
@@ -377,7 +376,6 @@ def print_state(sigma, mesh_sigma, flattener_sigma, N_particles,  num_flattener,
         print('num_beads: ', num_beads, file=f)
         print('bead_spacing:', bead_spacing, file=f)
         print('N_mesh: ', N_mesh, file=f)
-        print('k_bend_eff: ', k_bend_eff, file=f)
         print('k_bend', k_bend, file=f)
         print('mesh R: ', R, file=f)
         print('aspect_rat: ', aspect_rat,file=f)

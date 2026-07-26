@@ -17,21 +17,21 @@ def grid(gridspec):
 #       1 mass sim unit:    mass of 1 rod = 1.11 g/cm^3 * V_rod = 0.0313 g
 
 gridspec = {
-    "N_dup":    range(5), # num duplicates
+    "N_dup":    range(1), # num duplicates
     "N_mesh":   [1e3],
     "R":        [8], # Radius of spherical mesh
     "kT":       [0.2], 
     "visc":     [6.29e-3], #[50],
-    "k_bend":   [8,10,12], #[800,1000],
+    "k_bend":   [100], #[800,1000],
     "k_area_f": [10000], #[10000], #[1000, 10000],
     "k_area_i": [100],
     "TriArea":  [0.3],
     "dt":       [0.0001],
     "N_active":     [1],
     "num_beads":    [7], #[5,7],
-    "aspect_rat":   [1.5, 1.75, 2, 2.25, 2.5, 2.75, 3, 3.25, 3.5], #[3,4,5], # rod length in units of recalculated sigma
-    "freedom_rat":  [1.2,1.25,1.3,1.35,1.4,1.45,1.5,1.55,1.6,1.65,1.7,1.75,2], #[2,3,4], # [2, 3, 4], # ratio of mesh diam to rod length (decides rod const. particle)
-    "fA":           [4,5,6],
+    "aspect_rat":   [3.25], #[3,4,5], # rod length in units of recalculated sigma
+    "length_rat":  [5], #[2,3,4], # [2, 3, 4], # ratio of mesh diam to rod length (decides rod const. particle)
+    "fA":           [5],
     "runtime":      [8e7], #[5e6], #[8e7], #[5e6],
     "equiltime":    [2e7], #[2e7], #[2e5], #[1e5],
     

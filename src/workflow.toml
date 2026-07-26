@@ -11,11 +11,12 @@ partition = "shared"
 [[action]]
 name = "Run"
 launchers =["mpi"]
-products = ['Setup.out','Run.out']
-resources.walltime.per_submission = "01:00:00"
+products = ['Run.out']
+resources.walltime.per_submission = "2 days, 12:00:00"
 resources.processes.per_directory = 1
 group.maximum_size=1
-command = "python project.py --action $ACTION_NAME {directories}"
+command = "python ../../src/project.py --action $ACTION_NAME {directories}"
+
 
 [[action]]
 name = "Analysis"
@@ -24,4 +25,4 @@ launchers =["mpi"]
 resources.walltime.per_submission = "01:00:00"
 resources.processes.per_directory = 1
 group.maximum_size=1
-command = "python analysis.py --action $ACTION_NAME {directories}"
+command = "python ../src/analysis.py --action $ACTION_NAME {directories}"
