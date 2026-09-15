@@ -1,4 +1,4 @@
-## Boilerplate
+#Boilerplate
 import argparse
 import datetime
 import freud
@@ -36,13 +36,11 @@ def Run_implementation(job, communicator):
     
     # Calculate gammas
     visc    = job.cached_statepoint['visc']
-    gamma   = 6 * np.pi * sigma * visc #double check later
-    gam_r = 8 * np.pi * sigma**3 * visc
-    gamma_r = [gam_r, gam_r, gam_r]
+    gamma   = 6 * np.pi * sigma
+    gamma_r = [gamma/3.0, gamma/3.0, gamma/3.0]
 
-    mesh_gamma  = 6 * np.pi * mesh_sigma * visc
-    gam_r = 8 * np.pi * mesh_sigma**3 * visc
-    mesh_gamma_r = [gam_r, gam_r, gam_r]
+    mesh_gamma  = 6 * np.pi * mesh_sigma
+    mesh_gamma_r = [mesh_gamma/3.0, mesh_gamma/3.0, mesh_gamma/3.0]
     
     # Particle num and mesh scaling
     N_active       = int(job.cached_statepoint['N_active'])
@@ -349,6 +347,7 @@ def Run_implementation(job, communicator):
     #############################################
 
     snap = sim.state.get_snapshot()
+    print('after potentials:', snap.particles.diameter)
 
     # GSD logger:
     logger = hoomd.logging.Logger(['particle','constraint'])

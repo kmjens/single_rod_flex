@@ -42,9 +42,12 @@ if __name__ == "__main__":
 
     plotter = PlottingFxns()
     plotter.aggregate_results()
+    
+    '''
     plotter.collect_values()
 
     if PLOT_HEATMAPS:
         plotter.plot_heatmaps()
     if PLOT_LINES:
         plotter.plot_lines()
+    '''

@@ -41,7 +41,7 @@ def Analysis_implementation(job, communicator):
     SP = JobParser(job)
 
     # the following relations assume that sigma = 1
-    R = (SP.freedom_rat * SP.aspect_rat) / 2
+    R = (SP.length_rat * SP.aspect_rat) / 2
     N_mesh = int(4 * np.pi * R**2 / SP.TriArea) + 2
     cylinder_vol = SP.aspect_rat * np.pi * (1 / 2) ** 2
     
@@ -186,7 +186,7 @@ def Analysis_implementation(job, communicator):
             rot_auto = freud.order.RotationalAutocorrelation(l)
             if previous_ori == 'TRUE':
                 rot_auto.compute(ref_orientations=prev_ori, orientations=active_ori)
-                racf[i,count] = rot_auto.particle_order
+                #racf[i,count] = rot_auto.particle_order
                 #print(rot_auto.particle_order)
             
             count += 1
@@ -216,7 +216,7 @@ def Analysis_implementation(job, communicator):
     cmap_red = plt.get_cmap('Reds')
     norm_t = plt.Normalize(vmin=timesteps.min(), vmax=timesteps.max())
 
-    plot_rotational_autocorrelation_function(timesteps, racf, job)
+    #plot_rotational_autocorrelation_function(timesteps, racf, job)
 
     quats = active_com_orientation / np.linalg.norm(active_com_orientation, axis=1, keepdims=True)
     local_active_dir = np.tile([1, 0, 0], 1)
@@ -578,10 +578,10 @@ def Analysis_implementation(job, communicator):
         "fft_orient_phi_unwrapped_freq": float(fft_orient_phi_unwrapped_data['max_freq']),
         "fft_orient_theta_max": float(fft_orient_theta_data['max_amp']),
         "fft_orient_theta_freq": float(fft_orient_theta_data['max_freq']),
-        "fft_active_com_v_max": float(fft_active_com_v_data['max_amp']),
-        "fft_active_com_v_freq": float(fft_active_com_v_data['max_freq']),
-        "fft_mesh_com_v_max": float(fft_mesh_com_v_data['max_amp']),
-        "fft_mesh_com_v_freq": float(fft_mesh_com_v_data['max_freq']),
+        #"fft_active_com_v_max": float(fft_active_com_v_data['max_amp']),
+        #"fft_active_com_v_freq": float(fft_active_com_v_data['max_freq']),
+        #"fft_mesh_com_v_max": float(fft_mesh_com_v_data['max_amp']),
+        #"fft_mesh_com_v_freq": float(fft_mesh_com_v_data['max_freq']),
         "inner_v_fft_max": float(inner_v_fft_data['max_amp']),
         "inner_v_fft_freq": float(inner_v_fft_data['max_freq']),
         "inner_v_fft_xy_max": float(inner_v_fft_xy_data['max_amp']),

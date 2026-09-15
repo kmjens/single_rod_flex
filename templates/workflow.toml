@@ -7,6 +7,7 @@ account="sglotzer0"
 [default.action.submit_options.anvil]
 account='dmr140129'
 partition = "shared"
+output_file_path = "output_files/"
                                                                                             
 [[action]]
 name = "Run"
@@ -25,4 +26,31 @@ launchers =["mpi"]
 resources.walltime.per_submission = "01:00:00"
 resources.processes.per_directory = 1
 group.maximum_size=1
-command = "python ../src/analysis.py --action $ACTION_NAME {directories}"
+command = "python ../../src/analysis.py --action $ACTION_NAME {directories}"
+
+[[action]]
+name = "Analysis_wFFT"
+launchers =["mpi"]
+#products = ['analysis_data.json']
+resources.walltime.per_submission = "01:00:00"
+resources.processes.per_directory = 1
+group.maximum_size=1
+command = "python ../../src/analysis_wFFT.py --action $ACTION_NAME {directories}"
+
+[[action]]
+name = "AngleAnalysis"
+launchers =["mpi"]
+#products = ['analysis_data.json']
+resources.walltime.per_submission = "01:00:00"
+resources.processes.per_directory = 1
+group.maximum_size=1
+command = "python angle_analysis.py --action $ACTION_NAME {directories}"
+
+[[action]]
+name = "CollectData"
+launchers =["mpi"]
+#products = ['analysis_data.json']
+resources.walltime.per_submission = "01:00:00"
+resources.processes.per_directory = 1
+group.maximum_size=1
+command = "python ../../src/collect_traj_data.py --action $ACTION_NAME {directories}"
