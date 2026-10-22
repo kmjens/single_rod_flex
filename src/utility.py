@@ -3,6 +3,9 @@ import matplotlib
 import os
 import signac
 import glob
+import hoomd
+import gsd
+import gsd.hoomd
 
 import numpy as np
 import matplotlib.pyplot as plt
@@ -628,4 +631,137 @@ def find_mesh_radius_avg_and_std(sim):
     STDrad = np.std(rad)
     return AVGrad, STDrad
 
+
+
+# Logger, including mesh visualization using bonds
+class Logger(hoomd.custom.Action):
+    def __init__(self, sim, mesh, filename="custom_mesh.gsd"):
+        self.sim = sim
+        self.mesh = mesh
+        self.gsd_file = gsd.hoomd.open(filename, 'a')
+
+    def act(self, timestep):
+        # Build current bonds
+        bonds = self.mesh.bonds
+
+        # Take current snapshot and convert to gsd frame for writing
+        snap = self.sim.state.get_snapshot()
+        frame = gsd.hoomd.Frame()
+
+        frame.particles.angmom = snap.particles.angmom
+        frame.particles.body = snap.particles.body
+        frame.particles.diameter = snap.particles.diameter
+        frame.particles.moment_inertia = snap.particles.moment_inertia
+        frame.particles.N = snap.particles.N
+        frame.particles.orientation = snap.particles.orientation
+        frame.particles.position = snap.particles.position
+        frame.particles.typeid = snap.particles.typeid
+        frame.particles.types = snap.particles.types
+        frame.particles.velocity = snap.particles.velocity
+
+        frame.bonds.N = len(bonds)
+        frame.bonds.types = ['mesh_bond']
+        frame.bonds.typeid = np.zeros(len(bonds), dtype=int)
+        frame.bonds.group = bonds
+
+        L=64
+        frame.configuration.box = [L, L, L, 0, 0, 0]
+        frame.configuration.step = timestep
+        # Let HOOMD handle the actual writing
+        self.gsd_file.append(frame)
+        # required to flush buffer to file
+        self.gsd_file.flush()
+
+class TriangleWriter(hoomd.custom.Action):
+    """
+    Write out the triangles of a single mesh as JSON files at a specified frequency.
+    """
+
+    def __init__(
+        self,
+        sim,
+        mesh,
+        job,
+        prefix="triangle_jsons",
+    ):
+        self.sim = sim
+        self.mesh = mesh
+        self.job = job
+        self.prefix = prefix
+        self.frame = 0
+
+        # Create output directory
+        self.top_dir = self.job.fn(self.prefix)
+        os.makedirs(self.top_dir, exist_ok=True)
+
+    def act(self, timestep):
+        snap = self.sim.state.get_snapshot()
+        positions = np.asarray(snap.particles.position)
+
+        triangles = self.mesh.triangulation["triangles"].astype(int)
+
+        tri_global = triangles.tolist()
+        tri_local = triangles.tolist()   # same, since single mesh
+
+        pos_local = positions.tolist()
+
+        payload = {
+            "sim_timestep": timestep,
+            "frame": self.frame,
+            "num_vertices": len(positions),
+            "triangles_global": tri_global,
+            "triangles_local": tri_local,
+            "type_ids": [0] * len(tri_global),
+            "positions": pos_local,
+        }
+
+        filename = os.path.join(
+            self.top_dir, f"triangles_t{self.frame:06d}.json"
+        )
+
+        with open(filename, "w") as f:
+            json.dump(payload, f, indent=2)
+
+        self.frame += 1
+
+class STLWriter(hoomd.custom.Action):
+    """
+    Write the mesh of a single flexicle as an STL file at each timestep.
+    """
+
+    def __init__(
+        self,
+        sim,
+        mesh,
+        job,
+        prefix="meshes_stl",
+    ):
+        self.sim = sim
+        self.mesh = mesh
+        self.job = job
+        self.prefix = prefix
+        self.frame = 0
+
+        # Top-level directory
+        self.top_dir = self.job.fn(self.prefix)
+        os.makedirs(self.top_dir, exist_ok=True)
+
+    def act(self, timestep):
+        snap = self.sim.state.get_snapshot()
+        positions = np.asarray(snap.particles.position)
+
+        triangles = self.mesh.triangulation["triangles"]
+
+        mesh_trimesh = trimesh.Trimesh(
+            vertices=positions,
+            faces=triangles,
+            process=False  # don't reorder vertices
+        )
+
+        filename = os.path.join(
+            self.top_dir, f"mesh_t{timestep:06d}.stl"
+        )
+        mesh_trimesh.export(filename)
+
+        self.frame += 1
 

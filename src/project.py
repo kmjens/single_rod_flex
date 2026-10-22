@@ -1,4 +1,4 @@
-#Boilerplate
+
 import argparse
 import datetime
 import freud
@@ -359,6 +359,35 @@ def Run_implementation(job, communicator):
     gsd_oper.write_diameter = True
     sim.operations += gsd_oper
     sim.state.thermalize_particle_momenta(filter=filter_all, kT=SP.kT)
+
+    mesh_logger = Logger(
+        sim=sim,
+        mesh=mesh_obj,
+    )
+
+    save_freq = 500
+    mesh_updater = hoomd.update.CustomUpdater(
+        action=mesh_logger,
+        trigger=hoomd.trigger.Periodic(save_freq)  # log mesh every 50 steps (adjust as needed)
+    )
+    
+    sim.operations.updaters.append(mesh_updater)
+    sim.state.thermalize_particle_momenta(filter=filter_all, kT=SP.kT)
+
+    # Write jsons for each triangle
+    triangle_writer = TriangleWriter(
+        sim=sim,
+        mesh=mesh_obj,
+        job=job,
+        prefix="triangle_jsons",
+    )
+    
+    sim.operations.writers.append(
+        hoomd.write.CustomWriter(
+            action=triangle_writer,
+            trigger=hoomd.trigger.Periodic(save_freq),
+        )
+    )
     
     # Initialize
     sim.run(0)
@@ -367,6 +396,8 @@ def Run_implementation(job, communicator):
     snap = sim.state.get_snapshot()
 
     print('Equilibrating mesh...')
+    sim.run(50)
+    print('Ran for 50 steps')
     sim.run(5000)
 
     while k_area < SP.k_area_f:
