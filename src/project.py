@@ -349,9 +349,11 @@ def Run_implementation(job, communicator):
     snap = sim.state.get_snapshot()
     print('after potentials:', snap.particles.diameter)
 
+    save_freq = 10000
+    
     # GSD logger:
     logger = hoomd.logging.Logger(['particle','constraint'])
-    gsd_oper = hoomd.write.GSD(trigger=hoomd.trigger.Periodic(int(10000)), #int(2000)
+    gsd_oper = hoomd.write.GSD(trigger=hoomd.trigger.Periodic(int(10*save_freq)), #int(2000)
                                filename=job.fn('Initialize.gsd'),
                                logger=logger, mode='wb',
                                dynamic=['momentum','property','attribute','attribute/particles/diameter'],
@@ -360,6 +362,7 @@ def Run_implementation(job, communicator):
     sim.operations += gsd_oper
     sim.state.thermalize_particle_momenta(filter=filter_all, kT=SP.kT)
 
+    '''
     mesh_logger = Logger(
         sim=sim,
         mesh=mesh_obj,
@@ -372,22 +375,10 @@ def Run_implementation(job, communicator):
     )
     
     sim.operations.updaters.append(mesh_updater)
+    '''
+
     sim.state.thermalize_particle_momenta(filter=filter_all, kT=SP.kT)
 
-    # Write jsons for each triangle
-    triangle_writer = TriangleWriter(
-        sim=sim,
-        mesh=mesh_obj,
-        job=job,
-        prefix="triangle_jsons",
-    )
-    
-    sim.operations.writers.append(
-        hoomd.write.CustomWriter(
-            action=triangle_writer,
-            trigger=hoomd.trigger.Periodic(save_freq),
-        )
-    )
     
     # Initialize
     sim.run(0)
@@ -469,7 +460,22 @@ def Run_implementation(job, communicator):
     with open(job.fn('Run.out.in_progress'), 'w') as file:
         file.write('Running sim seed: ' + str(SP.simseed) + '\n')
     
-    gsd_run = hoomd.write.GSD(trigger=hoomd.trigger.Periodic(int(10000)), #int(2000)
+    # Write jsons for each triangle
+    triangle_writer = TriangleWriter(
+        sim=sim,
+        mesh=mesh_obj,
+        job=job,
+        prefix="triangle_jsons",
+    )
+    
+    sim.operations.writers.append(
+        hoomd.write.CustomWriter(
+            action=triangle_writer,
+            trigger=hoomd.trigger.Periodic(save_freq),
+        )
+    )
+    
+    gsd_run = hoomd.write.GSD(trigger=hoomd.trigger.Periodic(int(save_freq)), #int(2000)
                                filename=job.fn('Run.gsd'),
                                logger=logger, mode='wb',
                                dynamic=['momentum','property','attribute','attribute/particles/diameter'],
