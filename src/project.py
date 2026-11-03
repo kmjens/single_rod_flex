@@ -366,12 +366,13 @@ def Run_implementation(job, communicator):
     mesh_logger = Logger(
         sim=sim,
         mesh=mesh_obj,
+        job=job,
     )
 
     save_freq = 500
     mesh_updater = hoomd.update.CustomUpdater(
         action=mesh_logger,
-        trigger=hoomd.trigger.Periodic(save_freq)  # log mesh every 50 steps (adjust as needed)
+        trigger=hoomd.trigger.Periodic(save_freq)
     )
     
     sim.operations.updaters.append(mesh_updater)

@@ -635,10 +635,11 @@ def find_mesh_radius_avg_and_std(sim):
 
 # Logger, including mesh visualization using bonds
 class Logger(hoomd.custom.Action):
-    def __init__(self, sim, mesh, filename="custom_mesh.gsd"):
+    def __init__(self, sim, mesh, job):
+        self.job = job
         self.sim = sim
         self.mesh = mesh
-        self.gsd_file = gsd.hoomd.open(filename, 'a')
+        self.gsd_file = gsd.hoomd.open(job.fn("custom_mesh.gsd"), 'a')
 
     def act(self, timestep):
         # Build current bonds

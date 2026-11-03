@@ -13,7 +13,7 @@ output_file_path = "output_files/"
 name = "Run"
 launchers =["mpi"]
 products = ['Run.out']
-resources.walltime.per_submission = "2 days, 12:00:00"
+resources.walltime.per_submission = "3 days, 12:00:00"
 resources.processes.per_directory = 1
 group.maximum_size=1
 command = "python ../../src/project.py --action $ACTION_NAME {directories}"
@@ -38,19 +38,31 @@ group.maximum_size=1
 command = "python ../../src/analysis_wFFT.py --action $ACTION_NAME {directories}"
 
 [[action]]
-name = "AngleAnalysis"
-launchers =["mpi"]
-#products = ['analysis_data.json']
-resources.walltime.per_submission = "01:00:00"
-resources.processes.per_directory = 1
-group.maximum_size=1
-command = "python angle_analysis.py --action $ACTION_NAME {directories}"
-
-[[action]]
 name = "CollectData"
 launchers =["mpi"]
-#products = ['analysis_data.json']
+products = ['extracted_timestep_data.npz', 'MSD_CRG.csv']
 resources.walltime.per_submission = "01:00:00"
 resources.processes.per_directory = 1
 group.maximum_size=1
 command = "python ../../src/collect_traj_data.py --action $ACTION_NAME {directories}"
+
+[[action]]
+name = "PlotTraj"
+launchers =["mpi"]
+previous_actions = ['CollectData']
+products = ['GUV_traj_lab_frame_exp.png', 'GUV_traj_lab_frame_sim.png', 'Rod_traj_GUV_frame_sim.png', 'Rod_traj_GUV_frame_exp.png']
+resources.walltime.per_submission = "01:00:00"
+resources.processes.per_directory = 1
+group.maximum_size=1
+command = "python ../../src/plot_xy_traj.py --action $ACTION_NAME {directories}"
+
+[[action]]
+name = "AngleAnalysis"
+launchers =["mpi"]
+previous_actions = ['CollectData']
+products = ['rod_membrane_angle_sim.png', 'rod_membrane_angle_exp.png', 'rod_membrane_angle_dist.png']
+resources.walltime.per_submission = "01:00:00"
+resources.processes.per_directory = 1
+group.maximum_size=1
+command = "python ../../src/angle_analysis.py --action $ACTION_NAME {directories}"
+
